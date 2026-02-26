@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "755785009601",
+    "project_id": "petromind-3b8b2",
+    "storage_bucket": "petromind-3b8b2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:755785009601:android:95c60dcf121a212d614740",
+        "android_client_info": {
+          "package_name": "com.petromind.petromind"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDC0dSxDujft8WflGmS3d0Xq1g5V0kHhdE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
