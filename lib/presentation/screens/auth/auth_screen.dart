@@ -10,65 +10,109 @@ class AuthScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF8B0000),
       body: SafeArea(
-        child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('assets/images/logo.png',
-                  height: 60,
-                  errorBuilder: (c, e, s) => const Icon(
-                      Icons.local_gas_station,
-                      color: Colors.amber,
-                      size: 60)),
-              const SizedBox(width: 12),
-              const Text('PetroMind',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 80),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.push(context,
-                            MaterialPageRoute(
-                                builder: (_) => const LoginScreen())),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30)),
-                        ),
-                        child: const Text('Log in',
-                            style: TextStyle(fontSize: 16)),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.push(context,
-                            MaterialPageRoute(
-                                builder: (_) => const RegisterScreen())),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30)),
-                        ),
-                        child: const Text('create account',
-                            style: TextStyle(fontSize: 16)),
-                      ),
-                    ),
+              const Spacer(),
+
+              // ── LOGO ──
+              Image.asset(
+                'assets/images/logo.png',
+                height: 100,
+                errorBuilder: (c, e, s) => Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.local_gas_station,
+                        color: Colors.amber, size: 48),
+                    SizedBox(width: 10),
+                    Text('PetroMind',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            fontStyle: FontStyle.italic)),
                   ],
                 ),
               ),
+
+              const Spacer(),
+
+              // ── CUSTOMER BUTTON ──
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const LoginScreen(
+                              isStation: false))),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('customer',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w500)),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // ── OWNER BUTTON ──
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const LoginScreen(
+                              isStation: true))),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('owner',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w500)),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // ── SIGN UP LINK ──
+              GestureDetector(
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const RegisterScreen())),
+                child: RichText(
+                  text: const TextSpan(
+                    text: "Don't have an account? ",
+                    style: TextStyle(
+                        color: Colors.white70, fontSize: 14),
+                    children: [
+                      TextSpan(
+                        text: 'Sign up',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
             ],
           ),
         ),

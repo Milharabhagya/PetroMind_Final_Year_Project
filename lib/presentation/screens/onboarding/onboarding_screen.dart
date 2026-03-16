@@ -12,16 +12,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _controller = PageController();
   int _currentPage = 0;
 
-  final List<Map<String, String>> _pages = [
-    {
-      'title': 'PetroMind makes fueling faster, smarter, and more convenient',
-    },
-    {
-      'title': 'Find the nearest fuel station with real-time availability',
-    },
-    {
-      'title': 'Stay updated with latest fuel prices across Sri Lanka',
-    },
+  final List<String> _pages = [
+    'PetroMind makes fueling faster, smarter, and more convenient',
+    'Find the nearest fuel station with real-time availability',
+    'Stay updated with latest fuel prices across Sri Lanka',
   ];
 
   @override
@@ -31,47 +25,48 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 60),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset('assets/images/logo.png',
-                    height: 40,
-                    errorBuilder: (c, e, s) => const Icon(
-                        Icons.local_gas_station,
-                        color: Colors.amber,
-                        size: 40)),
-                const SizedBox(width: 10),
-                const Text('PetroMind',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold)),
-              ],
+            const SizedBox(height: 40),
+
+            // ── LOGO ──
+            Image.asset(
+              'assets/images/logo.png',
+              height: 160,
+              fit: BoxFit.contain,
+              errorBuilder: (c, e, s) => const Icon(
+                Icons.local_gas_station,
+                color: Colors.amber,
+                size: 80,
+              ),
             ),
+
+            const SizedBox(height: 20),
+
+            // ── SLIDING TEXT ──
             Expanded(
               child: PageView.builder(
                 controller: _controller,
                 onPageChanged: (i) => setState(() => _currentPage = i),
                 itemCount: _pages.length,
                 itemBuilder: (context, index) => Padding(
-                  padding: const EdgeInsets.all(40),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _pages[index]['title']!,
-                        textAlign: TextAlign.left,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold),
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _pages[index],
+                      textAlign: TextAlign.left,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        height: 1.3,
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
             ),
+
+            // ── DOTS ──
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
@@ -89,20 +84,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 40),
+
+            const SizedBox(height: 30),
+
+            // ── LETS START BUTTON ──
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: GestureDetector(
                 onTap: () {
                   if (_currentPage < _pages.length - 1) {
                     _controller.nextPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.ease);
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.ease,
+                    );
                   } else {
                     Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const AuthScreen()));
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const AuthScreen()),
+                    );
                   }
                 },
                 child: Container(
@@ -117,10 +117,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     children: [
                       const Padding(
                         padding: EdgeInsets.only(left: 24),
-                        child: Text("Lets start!",
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500)),
+                        child: Text(
+                          "Lets start!",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                       Container(
                         margin: const EdgeInsets.only(right: 8),
@@ -129,15 +132,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           color: Color(0xFF8B0000),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.arrow_forward,
-                            color: Colors.white, size: 20),
+                        child: const Icon(
+                          Icons.arrow_forward,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 40),
+
+            const SizedBox(height: 30),
           ],
         ),
       ),

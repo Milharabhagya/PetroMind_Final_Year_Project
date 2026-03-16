@@ -1,34 +1,64 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAvTAL-alQoQzHmnFxuO1QGTy7jvcJXyOg&libraries=places,geometry"></script>
+  <script>
+    // Search nearby fuel stations using Places API
+    function searchNearbyStations(lat, lng) {
+      return new Promise((resolve, reject) => {
+        const map = new google.maps.Map(document.createElement('div'));
+        const service = new google.maps.places.PlacesService(map);
+        service.nearbySearch({
+          location: new google.maps.LatLng(lat, lng),
+          radius: 10000,
+          type: 'gas_station',
+        }, (results, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+            const stations = results.map(place => ({
+              name: place.name || 'Fuel Station',
+              address: place.vicinity || '',
+              lat: place.geometry.location.lat(),
+              lng: place.geometry.location.lng(),
+              rating: place.rating || 0,
+              placeId: place.place_id || '',
+              isOpen: place.opening_hours ? place.opening_hours.open_now : null,
+            }));
+            resolve(stations);
+          } else {
+            reject(status);
+          }
+        });
+      });
+    }
 
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
+    // Geocode a search query to coordinates
+    function geocodeAddress(address) {
+      return new Promise((resolve, reject) => {
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ address: address }, (results, status) => {
+          if (status === 'OK' && results.length > 0) {
+            resolve({
+              lat: results[0].geometry.location.lat(),
+              lng: results[0].geometry.location.lng(),
+              formattedAddress: results[0].formatted_address,
+            });
+          } else {
+            reject(status);
+          }
+        });
+      });
+    }
+  </script>
 
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
-
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
-
-  <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="petromind">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
-
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
-
   <title>petromind</title>
   <link rel="manifest" href="manifest.json">
 </head>
