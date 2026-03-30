@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../config/api_keys.dart'; // ✅ Import from config
 
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({super.key});
@@ -17,8 +18,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   bool _isTyping = false;
   DateTime? _lastMessageTime;
 
-  static const String _apiKey =
-      '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';
+  // ✅ Key now comes from config file — not hardcoded
+  static const String _apiKey = groqApiKey;
 
   final List<Map<String, dynamic>> _messages = [
     {
@@ -69,8 +70,7 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
     _scrollToBottom();
 
     try {
-      final List<Map<String, dynamic>> groqMessages =
-          [];
+      final List<Map<String, dynamic>> groqMessages = [];
 
       groqMessages.add({
         'role': 'system',
@@ -84,9 +84,7 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
 
       for (final m in history) {
         groqMessages.add({
-          'role': m['isBot'] == true
-              ? 'assistant'
-              : 'user',
+          'role': m['isBot'] == true ? 'assistant' : 'user',
           'content': m['text'].toString(),
         });
       }
@@ -130,8 +128,7 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
           _scrollToBottom();
         }
       } else {
-        print(
-            'Groq error: ${response.statusCode} ${response.body}');
+        print('Groq error: ${response.statusCode} ${response.body}');
         _addErrorMessage();
       }
     } catch (e) {
@@ -155,8 +152,7 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
   }
 
   void _scrollToBottom() {
-    Future.delayed(
-        const Duration(milliseconds: 100), () {
+    Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
@@ -189,18 +185,14 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
       appBar: AppBar(
         backgroundColor: const Color(0xFFF5F0EB),
         elevation: 0,
-        // ✅ FIXED: Back button instead of menu
         leading: IconButton(
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
                 color: const Color(0xFF8B0000),
-                borderRadius:
-                    BorderRadius.circular(8)),
-            child: const Icon(
-                Icons.arrow_back_ios_new,
-                color: Colors.white,
-                size: 16),
+                borderRadius: BorderRadius.circular(8)),
+            child: const Icon(Icons.arrow_back_ios_new,
+                color: Colors.white, size: 16),
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -217,8 +209,7 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
           ),
           const SizedBox(width: 8),
           const Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('PetroMind AI',
                   style: TextStyle(
@@ -226,9 +217,8 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
                       fontWeight: FontWeight.bold,
                       fontSize: 15)),
               Text('Powered by Groq AI',
-                  style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 10)),
+                  style:
+                      TextStyle(color: Colors.grey, fontSize: 10)),
             ],
           ),
         ]),
@@ -238,8 +228,7 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                   color: const Color(0xFF8B0000),
-                  borderRadius:
-                      BorderRadius.circular(8)),
+                  borderRadius: BorderRadius.circular(8)),
               child: const Icon(Icons.person,
                   color: Colors.white, size: 20),
             ),
@@ -261,14 +250,13 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
                 child: ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.all(16),
-                  itemCount: _messages.length +
-                      (_isTyping ? 1 : 0),
+                  itemCount:
+                      _messages.length + (_isTyping ? 1 : 0),
                   itemBuilder: (context, index) {
-                    if (index == _messages.length &&
-                        _isTyping) {
+                    if (index == _messages.length && _isTyping) {
                       return Padding(
-                        padding: const EdgeInsets
-                            .only(bottom: 12),
+                        padding:
+                            const EdgeInsets.only(bottom: 12),
                         child: Row(
                           crossAxisAlignment:
                               CrossAxisAlignment.end,
@@ -276,51 +264,37 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
                             Container(
                               width: 36,
                               height: 36,
-                              decoration:
-                                  const BoxDecoration(
-                                      color:
-                                          Colors.white,
-                                      shape: BoxShape
-                                          .circle),
-                              child: const Icon(
-                                  Icons.smart_toy,
-                                  color:
-                                      Color(0xFF8B0000),
+                              decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle),
+                              child: const Icon(Icons.smart_toy,
+                                  color: Color(0xFF8B0000),
                                   size: 22),
                             ),
                             const SizedBox(width: 8),
                             Container(
                               padding:
-                                  const EdgeInsets
-                                      .symmetric(
+                                  const EdgeInsets.symmetric(
                                       horizontal: 16,
                                       vertical: 12),
-                              decoration:
-                                  const BoxDecoration(
+                              decoration: const BoxDecoration(
                                 color: Colors.white,
-                                borderRadius:
-                                    BorderRadius.only(
+                                borderRadius: BorderRadius.only(
                                   topLeft:
-                                      Radius.circular(
-                                          16),
+                                      Radius.circular(16),
                                   topRight:
-                                      Radius.circular(
-                                          16),
+                                      Radius.circular(16),
                                   bottomRight:
-                                      Radius.circular(
-                                          16),
+                                      Radius.circular(16),
                                 ),
                               ),
                               child: Row(
-                                mainAxisSize:
-                                    MainAxisSize.min,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   _dot(0),
-                                  const SizedBox(
-                                      width: 4),
+                                  const SizedBox(width: 4),
                                   _dot(1),
-                                  const SizedBox(
-                                      width: 4),
+                                  const SizedBox(width: 4),
                                   _dot(2),
                                 ],
                               ),
@@ -331,13 +305,12 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
                     }
 
                     final msg = _messages[index];
-                    final isBot =
-                        msg['isBot'] as bool;
+                    final isBot = msg['isBot'] as bool;
                     final isFirst = index == 0;
 
                     return Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: 12),
+                      padding:
+                          const EdgeInsets.only(bottom: 12),
                       child: Row(
                         crossAxisAlignment:
                             CrossAxisAlignment.end,
@@ -349,16 +322,11 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
                             Container(
                               width: 36,
                               height: 36,
-                              decoration:
-                                  const BoxDecoration(
-                                      color:
-                                          Colors.white,
-                                      shape: BoxShape
-                                          .circle),
-                              child: const Icon(
-                                  Icons.smart_toy,
-                                  color:
-                                      Color(0xFF8B0000),
+                              decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle),
+                              child: const Icon(Icons.smart_toy,
+                                  color: Color(0xFF8B0000),
                                   size: 22),
                             ),
                             const SizedBox(width: 8),
@@ -372,24 +340,20 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
                                       0.60,
                             ),
                             padding:
-                                const EdgeInsets
-                                    .symmetric(
+                                const EdgeInsets.symmetric(
                                     horizontal: 14,
                                     vertical: 10),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius:
-                                  BorderRadius.only(
-                                topLeft: const Radius
-                                    .circular(16),
-                                topRight: const Radius
-                                    .circular(16),
-                                bottomLeft:
-                                    Radius.circular(
-                                        isBot ? 0 : 16),
-                                bottomRight:
-                                    Radius.circular(
-                                        isBot ? 16 : 0),
+                              borderRadius: BorderRadius.only(
+                                topLeft:
+                                    const Radius.circular(16),
+                                topRight:
+                                    const Radius.circular(16),
+                                bottomLeft: Radius.circular(
+                                    isBot ? 0 : 16),
+                                bottomRight: Radius.circular(
+                                    isBot ? 16 : 0),
                               ),
                             ),
                             child: isFirst
@@ -401,31 +365,24 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
                                             color: Color(
                                                 0xFF8B0000),
                                             fontWeight:
-                                                FontWeight
-                                                    .bold),
+                                                FontWeight.bold),
                                       ),
                                       TextSpan(
                                         text: msg['text']
                                             .toString()
                                             .replaceFirst(
-                                                'Hello! ',
-                                                ''),
-                                        style:
-                                            const TextStyle(
-                                                color: Colors
-                                                    .black87),
+                                                'Hello! ', ''),
+                                        style: const TextStyle(
+                                            color:
+                                                Colors.black87),
                                       ),
                                     ],
                                   ))
                                 : Text(
-                                    msg['text']
-                                        .toString(),
-                                    style:
-                                        const TextStyle(
-                                            color: Colors
-                                                .black87,
-                                            fontSize:
-                                                13),
+                                    msg['text'].toString(),
+                                    style: const TextStyle(
+                                        color: Colors.black87,
+                                        fontSize: 13),
                                   ),
                           ),
                         ],
@@ -446,29 +403,24 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
                     itemCount: _suggestions.length,
                     separatorBuilder: (_, __) =>
                         const SizedBox(width: 8),
-                    itemBuilder: (_, i) =>
-                        GestureDetector(
+                    itemBuilder: (_, i) => GestureDetector(
                       onTap: () {
                         _messageController.text =
                             _suggestions[i].replaceAll(
-                                RegExp(r'^[^\s]+\s'),
-                                '');
+                                RegExp(r'^[^\s]+\s'), '');
                         _sendMessage();
                       },
                       child: Container(
-                        padding:
-                            const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.white
-                              .withValues(alpha: 0.15),
+                              .withOpacity(0.15),
                           borderRadius:
                               BorderRadius.circular(20),
                           border: Border.all(
                               color: Colors.white
-                                  .withValues(
-                                      alpha: 0.4)),
+                                  .withOpacity(0.4)),
                         ),
                         child: Text(
                           _suggestions[i],
@@ -490,8 +442,7 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
                     horizontal: 16, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius:
-                      BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(30),
                 ),
                 child: Row(children: [
                   Expanded(
@@ -503,18 +454,15 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
                             color: Colors.black38),
                         border: InputBorder.none,
                       ),
-                      onSubmitted: (_) =>
-                          _sendMessage(),
-                      textInputAction:
-                          TextInputAction.send,
+                      onSubmitted: (_) => _sendMessage(),
+                      textInputAction: TextInputAction.send,
                     ),
                   ),
                   _isTyping
                       ? const SizedBox(
                           width: 22,
                           height: 22,
-                          child:
-                              CircularProgressIndicator(
+                          child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: Color(0xFF8B0000),
                           ),
@@ -537,8 +485,8 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
   Widget _dot(int index) {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.4, end: 1.0),
-      duration: Duration(
-          milliseconds: 400 + (index * 150)),
+      duration:
+          Duration(milliseconds: 400 + (index * 150)),
       builder: (_, value, child) => Opacity(
         opacity: value,
         child: Container(
