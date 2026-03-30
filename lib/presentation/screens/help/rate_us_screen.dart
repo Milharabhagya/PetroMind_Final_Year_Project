@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RateUsScreen extends StatefulWidget {
   const RateUsScreen({super.key});
@@ -9,6 +11,41 @@ class RateUsScreen extends StatefulWidget {
 
 class _RateUsScreenState extends State<RateUsScreen> {
   int _rating = 0;
+  bool _isSubmitting = false;
+
+  Future<void> _submitRating() async {
+    setState(() => _isSubmitting = true);
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      await FirebaseFirestore.instance.collection('ratings').add({
+        'userId': user?.uid ?? 'anonymous',
+        'userEmail': user?.email ?? 'unknown',
+        'rating': _rating,
+        'submittedAt': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Thank you for your rating!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to submit rating: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +56,8 @@ class _RateUsScreenState extends State<RateUsScreen> {
         elevation: 0,
         leading: const BackButton(color: Colors.black),
         title: const Text('Rate Us',
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            style:
+                TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
       ),
       body: Center(
         child: Padding(
@@ -41,7 +79,7 @@ class _RateUsScreenState extends State<RateUsScreen> {
                         fontSize: 24,
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
-                const Text('Enjoying Petromind?',
+                const Text('Enjoying PetroMind?',
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
@@ -56,7 +94,9 @@ class _RateUsScreenState extends State<RateUsScreen> {
                       onPressed: () =>
                           setState(() => _rating = index + 1),
                       icon: Icon(
-                        index < _rating ? Icons.star : Icons.star_border,
+                        index < _rating
+                            ? Icons.star
+                            : Icons.star_border,
                         color: Colors.white,
                         size: 36,
                       ),
@@ -66,11 +106,20 @@ class _RateUsScreenState extends State<RateUsScreen> {
                 if (_rating > 0) ...[
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
+                    // ✅ Calls Firestore submit, shows loading while saving
+                    onPressed: _isSubmitting ? null : _submitRating,
                     style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white),
-                    child: const Text('Submit Rating',
-                        style: TextStyle(color: Color(0xFF8B0000))),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                color: Color(0xFF8B0000), strokeWidth: 2),
+                          )
+                        : const Text('Submit Rating',
+                            style:
+                                TextStyle(color: Color(0xFF8B0000))),
                   ),
                 ],
               ],

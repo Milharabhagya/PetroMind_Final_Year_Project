@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
 import '../home/home_screen.dart';
 import '../station/station_dashboard_screen.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/user_provider.dart';
+import '../../../services/auto_crowd_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   final bool isStation;
@@ -19,9 +21,57 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
+  // ✅ Station-only fields
+  final _stationNameController = TextEditingController();
+  final _addressController = TextEditingController();
+
   bool _showPassword = false;
   bool _showConfirmPassword = false;
   bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _stationNameController.dispose();
+    _addressController.dispose();
+    super.dispose();
+  }
+
+  // ✅ Get GPS location with permission handling
+  Future<Position?> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _showError('Please enable GPS/location services.');
+        return null;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _showError('Location permission denied.');
+          return null;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        _showError('Location permission permanently denied. Enable in settings.');
+        return null;
+      }
+
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+    } catch (e) {
+      _showError('Could not get location: $e');
+      return null;
+    }
+  }
 
   Future<void> _handleRegister() async {
     final firstName = _firstNameController.text.trim();
@@ -30,8 +80,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
-    if (firstName.isEmpty || lastName.isEmpty || email.isEmpty ||
-        password.isEmpty || confirmPassword.isEmpty) {
+    // ✅ Extra validation for station fields
+    if (widget.isStation) {
+      if (_stationNameController.text.trim().isEmpty ||
+          _addressController.text.trim().isEmpty) {
+        _showError('Please fill in station name and address.');
+        return;
+      }
+    }
+
+    if (firstName.isEmpty ||
+        lastName.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty ||
+        confirmPassword.isEmpty) {
       _showError('Please fill in all fields.');
       return;
     }
@@ -50,19 +112,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isLoading = true);
 
-    final result = widget.isStation
-        ? await AuthService.registerStation(
-            firstName: firstName,
-            lastName: lastName,
-            email: email,
-            password: password,
-          )
-        : await AuthService.registerCustomer(
-            firstName: firstName,
-            lastName: lastName,
-            email: email,
-            password: password,
-          );
+    Map<String, dynamic> result;
+
+    if (widget.isStation) {
+      // ✅ Get GPS location before registering station
+      final position = await _getCurrentLocation();
+      if (position == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      result = await AuthService.registerStation(
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        password: password,
+        stationName: _stationNameController.text.trim(),
+        address: _addressController.text.trim(),
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+    } else {
+      result = await AuthService.registerCustomer(
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        password: password,
+      );
+    }
 
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -81,6 +158,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       } else {
         await provider.loadUserData();
         if (!mounted) return;
+        AutoCrowdService.autoLogCrowdOnLogin();
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -94,21 +172,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red[700],
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red[700]),
     );
-  }
-
-  @override
-  void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
   }
 
   @override
@@ -121,7 +186,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── TOP BAR ──
+              // Top bar
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -170,6 +235,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
               _buildField(_lastNameController, 'Enter your last name'),
               const SizedBox(height: 16),
 
+              // ✅ Station-only fields shown conditionally
+              if (widget.isStation) ...[
+                const Text('Station name',
+                    style: TextStyle(color: Colors.white, fontSize: 14)),
+                const SizedBox(height: 8),
+                _buildField(_stationNameController, 'e.g. Ceypetco Homagama'),
+                const SizedBox(height: 16),
+
+                const Text('Station address',
+                    style: TextStyle(color: Colors.white, fontSize: 14)),
+                const SizedBox(height: 8),
+                _buildField(_addressController, 'e.g. Homagama, Colombo'),
+                const SizedBox(height: 8),
+
+                // ✅ GPS notice for station owners
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.location_on, color: Colors.amber, size: 18),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Your current GPS location will be saved to help customers find your station.',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
               const Text('Email',
                   style: TextStyle(color: Colors.white, fontSize: 14)),
               const SizedBox(height: 8),
@@ -181,20 +283,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: TextStyle(color: Colors.white, fontSize: 14)),
               const SizedBox(height: 8),
               _buildPasswordField(
-                  _passwordController, 'Create new password', _showPassword,
-                  onToggle: () =>
-                      setState(() => _showPassword = !_showPassword)),
+                _passwordController,
+                'Create new password',
+                _showPassword,
+                onToggle: () =>
+                    setState(() => _showPassword = !_showPassword),
+              ),
               const SizedBox(height: 16),
 
               const Text('Confirm password',
                   style: TextStyle(color: Colors.white, fontSize: 14)),
               const SizedBox(height: 8),
               _buildPasswordField(
-                  _confirmPasswordController,
-                  'Confirm password',
-                  _showConfirmPassword,
-                  onToggle: () => setState(
-                      () => _showConfirmPassword = !_showConfirmPassword)),
+                _confirmPasswordController,
+                'Confirm password',
+                _showConfirmPassword,
+                onToggle: () => setState(
+                    () => _showConfirmPassword = !_showConfirmPassword),
+              ),
               const SizedBox(height: 32),
 
               SizedBox(
@@ -212,7 +318,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child:
+                              CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Text('Create account',
                           style: TextStyle(
@@ -264,7 +371,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         suffixIcon: IconButton(
-          icon: Icon(obscure ? Icons.visibility_off : Icons.visibility,
+          icon: Icon(
+              obscure ? Icons.visibility_off : Icons.visibility,
               color: Colors.black54),
           onPressed: onToggle,
         ),

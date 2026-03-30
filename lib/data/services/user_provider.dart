@@ -36,7 +36,10 @@ class UserProvider extends ChangeNotifier {
     try {
       final user = _auth.currentUser;
       if (user == null) return;
-      final doc = await _db.collection('stations').doc(user.uid).get();
+      final doc = await _db
+          .collection('stations')
+          .doc(user.uid)
+          .get();
       if (doc.exists) {
         final data = doc.data()!;
         _firstName = data['firstName'] ?? '';

@@ -1,59 +1,233 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAvTAL-alQoQzHmnFxuO1QGTy7jvcJXyOg&libraries=places,geometry"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <script>
-    // Search nearby fuel stations using Places API
-    function searchNearbyStations(lat, lng) {
-      return new Promise((resolve, reject) => {
-        const map = new google.maps.Map(document.createElement('div'));
-        const service = new google.maps.places.PlacesService(map);
-        service.nearbySearch({
-          location: new google.maps.LatLng(lat, lng),
-          radius: 10000,
-          type: 'gas_station',
-        }, (results, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-            const stations = results.map(place => ({
-              name: place.name || 'Fuel Station',
-              address: place.vicinity || '',
-              lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng(),
-              rating: place.rating || 0,
-              placeId: place.place_id || '',
-              isOpen: place.opening_hours ? place.opening_hours.open_now : null,
-            }));
-            resolve(stations);
-          } else {
-            reject(status);
-          }
+    // ── CORS PROXIES ──
+    const CORS_PROXIES = [
+      'https://corsproxy.io/?',
+      'https://api.allorigins.win/raw?url=',
+    ];
+
+    const OVERPASS_URL =
+      'https://overpass-api.de/api/interpreter';
+
+    async function fetchWithCorsProxy(url, options = {}) {
+      // Try direct first
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(
+          () => controller.abort(), 8000);
+        const res = await fetch(url, {
+          ...options,
+          signal: controller.signal
         });
-      });
+        clearTimeout(timer);
+        if (res.ok) {
+          const text = await res.text();
+          if (!text.trim().startsWith('<'))
+            return text;
+        }
+      } catch (e) {
+        console.warn('Direct fetch failed:', e.message);
+      }
+
+      // Try CORS proxies
+      for (const proxy of CORS_PROXIES) {
+        try {
+          const proxiedUrl = proxy +
+            encodeURIComponent(url);
+          const controller = new AbortController();
+          const timer = setTimeout(
+            () => controller.abort(), 10000);
+          const res = await fetch(proxiedUrl, {
+            signal: controller.signal
+          });
+          clearTimeout(timer);
+          if (res.ok) {
+            const text = await res.text();
+            if (!text.trim().startsWith('<')) {
+              console.log('CORS proxy success:', proxy);
+              return text;
+            }
+          }
+        } catch (e) {
+          console.warn('Proxy failed:', proxy,
+            e.message);
+        }
+      }
+      throw new Error('All fetch attempts failed');
     }
 
-    // Geocode a search query to coordinates
-    function geocodeAddress(address) {
-      return new Promise((resolve, reject) => {
-        const geocoder = new google.maps.Geocoder();
-        geocoder.geocode({ address: address }, (results, status) => {
-          if (status === 'OK' && results.length > 0) {
-            resolve({
-              lat: results[0].geometry.location.lat(),
-              lng: results[0].geometry.location.lng(),
-              formattedAddress: results[0].formatted_address,
-            });
-          } else {
-            reject(status);
-          }
+    // ── NOMINATIM FALLBACK ──
+    async function searchViaNominatim(lat, lng) {
+      console.log('Trying Nominatim fallback...');
+      try {
+        const url =
+          'https://nominatim.openstreetmap.org/search' +
+          '?amenity=fuel' +
+          '&format=json' +
+          '&limit=20' +
+          '&viewbox=' + (lng-0.15) + ',' +
+          (lat+0.15) + ',' + (lng+0.15) + ',' +
+          (lat-0.15) +
+          '&bounded=1' +
+          '&addressdetails=1';
+
+        const text = await fetchWithCorsProxy(url);
+        const data = JSON.parse(text);
+        console.log('Nominatim found:',
+          (data || []).length, 'stations');
+
+        return (data || []).map(function(item) {
+          const addr = item.address || {};
+          const road = addr.road || addr.street || '';
+          const city = addr.city || addr.town ||
+            addr.village || addr.county || 'Sri Lanka';
+          const address = road ?
+            road + ', ' + city : city;
+
+          return {
+            name: item.display_name.split(',')[0]
+              .trim() || 'Fuel Station',
+            address: address,
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon),
+            rating: 0,
+            placeId: 'nom_' + item.place_id,
+            isOpen: null,
+            hasPetrol: true,
+            hasDiesel: true,
+            hasOctane98: false,
+            brand: '',
+          };
         });
-      });
+      } catch (e) {
+        console.error('Nominatim failed:', e);
+        return [];
+      }
+    }
+
+    // ── MAIN: SEARCH NEARBY FUEL STATIONS ──
+    async function searchNearbyStations(lat, lng) {
+      const radius = 10000;
+      const query =
+        '[out:json][timeout:10];' +
+        'node["amenity"="fuel"]' +
+        '(around:' + radius + ',' +
+        lat + ',' + lng + ');' +
+        'out body;';
+
+      const fullUrl = OVERPASS_URL +
+        '?data=' + encodeURIComponent(query);
+
+      try {
+        const text = await fetchWithCorsProxy(
+          fullUrl);
+        const data = JSON.parse(text);
+        const elements = data.elements || [];
+        console.log('Found', elements.length,
+          'stations via Overpass');
+
+        if (elements.length > 0) {
+          return elements.map(function(e) {
+            const tags = e.tags || {};
+            const name = tags.name ||
+              tags.brand ||
+              tags.operator ||
+              'Fuel Station';
+            return {
+              name: name,
+              address: [
+                tags['addr:street'],
+                tags['addr:city']
+              ].filter(Boolean).join(', ') ||
+                'Sri Lanka',
+              lat: e.lat,
+              lng: e.lon,
+              rating: 0,
+              placeId: 'osm_' + e.id,
+              isOpen: null,
+              hasPetrol: true,
+              hasDiesel: true,
+              hasOctane98:
+                tags['fuel:octane_98'] === 'yes' ||
+                tags['fuel:super'] === 'yes',
+              brand: (tags.brand ||
+                tags.name || '').toLowerCase(),
+            };
+          });
+        }
+      } catch (e) {
+        console.warn('Overpass failed:', e.message);
+      }
+
+      // Fallback to Nominatim
+      return await searchViaNominatim(lat, lng);
+    }
+
+    // ── GEOCODE ADDRESS ──
+    async function geocodeAddress(address) {
+      try {
+        const url =
+          'https://nominatim.openstreetmap.org/search' +
+          '?q=' + encodeURIComponent(address) +
+          '&format=json&limit=1';
+        const text = await fetchWithCorsProxy(url);
+        const data = JSON.parse(text);
+        if (data && data.length > 0) {
+          return {
+            lat: parseFloat(data[0].lat),
+            lng: parseFloat(data[0].lon),
+            formattedAddress: data[0].display_name,
+          };
+        }
+        throw new Error('Not found');
+      } catch (err) {
+        console.error('Geocode error:', err);
+        throw err;
+      }
+    }
+
+    // ── GET ROUTE (FREE - OSRM) ──
+    async function getRoute(
+        fromLat, fromLng, toLat, toLng) {
+      try {
+        const url =
+          'https://router.project-osrm.org' +
+          '/route/v1/driving/' +
+          fromLng + ',' + fromLat + ';' +
+          toLng + ',' + toLat +
+          '?overview=full&geometries=geojson';
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.routes && data.routes.length > 0) {
+          const route = data.routes[0];
+          return {
+            coords: route.geometry.coordinates
+              .map(function(c) {
+                return { lat: c[1], lng: c[0] };
+              }),
+            distanceKm:
+              (route.distance / 1000).toFixed(1),
+            durationMin:
+              Math.round(route.duration / 60),
+          };
+        }
+        throw new Error('No route');
+      } catch (err) {
+        console.error('Route error:', err);
+        throw err;
+      }
     }
   </script>
 
   <base href="$FLUTTER_BASE_HREF">
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="PetroMind - Fuel price tracking app for Sri Lanka">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="petromind">

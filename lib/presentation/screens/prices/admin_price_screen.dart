@@ -9,13 +9,10 @@ class AdminPriceScreen extends StatefulWidget {
       _AdminPriceScreenState();
 }
 
-class _AdminPriceScreenState
-    extends State<AdminPriceScreen> {
-  // ✅ Must match exactly with price_screen.dart
+class _AdminPriceScreenState extends State<AdminPriceScreen> {
   static const _collection = 'fuel_prices_ceypetco';
 
-  final Map<String, TextEditingController>
-      _controllers = {};
+  final Map<String, TextEditingController> _controllers = {};
   final TextEditingController _globalDateController =
       TextEditingController();
   bool _saving = false;
@@ -27,13 +24,11 @@ class _AdminPriceScreenState
     super.dispose();
   }
 
-  Future<void> _saveAll(
-      List<QueryDocumentSnapshot> docs) async {
+  Future<void> _saveAll(List<QueryDocumentSnapshot> docs) async {
     setState(() => _saving = true);
     try {
       final batch = FirebaseFirestore.instance.batch();
-      final globalDate =
-          _globalDateController.text.trim();
+      final globalDate = _globalDateController.text.trim();
 
       for (final doc in docs) {
         final priceText =
@@ -83,14 +78,12 @@ class _AdminPriceScreenState
   }
 
   Future<void> _saveSingle(String docId) async {
-    final priceText =
-        _controllers[docId]?.text.trim() ?? '';
+    final priceText = _controllers[docId]?.text.trim() ?? '';
     if (priceText.isEmpty) return;
     final price = double.tryParse(priceText);
     if (price == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Invalid price value')),
+        const SnackBar(content: Text('Invalid price value')),
       );
       return;
     }
@@ -100,8 +93,7 @@ class _AdminPriceScreenState
         'price': price,
         'updatedAt': FieldValue.serverTimestamp(),
       };
-      final globalDate =
-          _globalDateController.text.trim();
+      final globalDate = _globalDateController.text.trim();
       if (globalDate.isNotEmpty) {
         updateData['effectiveDate'] = globalDate;
       }
@@ -135,7 +127,20 @@ class _AdminPriceScreenState
       appBar: AppBar(
         backgroundColor: const Color(0xFF8B0000),
         elevation: 0,
-        leading: const BackButton(color: Colors.white),
+        // ✅ Fixes burger menu showing
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.arrow_back_ios_new,
+                color: Colors.white, size: 16),
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text('Update Fuel Prices',
             style: TextStyle(
                 color: Colors.white,
@@ -156,7 +161,7 @@ class _AdminPriceScreenState
 
           final docs = snapshot.data!.docs;
 
-          // Initialize controllers with current values
+          // ✅ Initialize controllers with current values
           for (final doc in docs) {
             if (!_controllers.containsKey(doc.id)) {
               final data =
@@ -193,8 +198,8 @@ class _AdminPriceScreenState
                     color: Colors.blue[50],
                     borderRadius:
                         BorderRadius.circular(8),
-                    border: Border.all(
-                        color: Colors.blue[200]!),
+                    border:
+                        Border.all(color: Colors.blue[200]!),
                   ),
                   child: Row(children: [
                     Icon(Icons.info_outline,
@@ -262,20 +267,22 @@ class _AdminPriceScreenState
                         fontSize: 16,
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                ...retailDocs.map((doc) => _priceRow(doc)),
+                ...retailDocs
+                    .map((doc) => _priceRow(doc)),
 
                 const SizedBox(height: 16),
 
                 // ── INDUSTRIAL PRICES ──
-                const Text('Industrial Fuel',
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                ...industrialDocs
-                    .map((doc) => _priceRow(doc)),
-
-                const SizedBox(height: 24),
+                if (industrialDocs.isNotEmpty) ...[
+                  const Text('Industrial Fuel',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  ...industrialDocs
+                      .map((doc) => _priceRow(doc)),
+                  const SizedBox(height: 16),
+                ],
 
                 // ── SAVE ALL ──
                 SizedBox(
@@ -311,8 +318,9 @@ class _AdminPriceScreenState
                           fontSize: 16,
                           fontWeight: FontWeight.bold),
                     ),
-                    onPressed:
-                        _saving ? null : () => _saveAll(docs),
+                    onPressed: _saving
+                        ? null
+                        : () => _saveAll(docs),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -337,7 +345,7 @@ class _AdminPriceScreenState
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 6,
           )
         ],
@@ -348,7 +356,8 @@ class _AdminPriceScreenState
           Expanded(
             flex: 3,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 Text(data['name'] ?? '',
                     style: const TextStyle(
@@ -378,7 +387,8 @@ class _AdminPriceScreenState
                 labelStyle:
                     const TextStyle(fontSize: 12),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius:
+                      BorderRadius.circular(8),
                 ),
                 contentPadding:
                     const EdgeInsets.symmetric(
@@ -388,7 +398,7 @@ class _AdminPriceScreenState
           ),
           const SizedBox(width: 8),
 
-          // Quick save button
+          // ✅ Quick save single price
           GestureDetector(
             onTap: () => _saveSingle(doc.id),
             child: Container(

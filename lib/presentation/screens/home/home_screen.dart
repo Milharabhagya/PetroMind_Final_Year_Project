@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../../services/user_provider.dart';
+import '../../../services/location_service.dart';
 import '../prices/price_screen.dart';
 import '../stations/stations_screen.dart';
 import '../alerts/alerts_screen.dart';
@@ -11,8 +13,47 @@ import '../profile/profile_screen.dart';
 import '../auth/auth_screen.dart';
 import '../../widgets/home/crowd_chart_widget.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  Position? _userPosition;
+  String _locationLabel = 'Locating...';
+  bool _locationLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLocation();
+  }
+
+  Future<void> _fetchLocation() async {
+    final position = await LocationService.getCurrentLocation();
+    if (mounted) {
+      setState(() {
+        _userPosition = position;
+        _locationLoaded = true;
+        // If location fails, fall back to Colombo
+        _locationLabel = position != null
+            ? '${position.latitude.toStringAsFixed(3)}, ${position.longitude.toStringAsFixed(3)}'
+            : 'Colombo, Sri Lanka (default)';
+      });
+    }
+  }
+
+  String _daySuffix(int day) {
+    if (day >= 11 && day <= 13) return 'th';
+    switch (day % 10) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,12 +121,11 @@ class HomeScreen extends StatelessWidget {
         backgroundColor: const Color(0xFF8B0000),
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(
-              builder: (_) => const ChatbotScreen()),
+          MaterialPageRoute(builder: (_) => const ChatbotScreen()),
         ),
         icon: const Icon(Icons.smart_toy, color: Colors.white),
-        label:
-            const Text("AI", style: TextStyle(color: Colors.white)),
+        label: const Text("AI",
+            style: TextStyle(color: Colors.white)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -98,19 +138,48 @@ class HomeScreen extends StatelessWidget {
               style: const TextStyle(
                   fontSize: 24, fontWeight: FontWeight.bold),
             ),
+            Text(dateStr,
+                style: const TextStyle(
+                    color: Colors.grey, fontSize: 13)),
+            // Shows real coordinates once loaded
             Text(
-              dateStr,
+              _locationLabel,
               style:
                   const TextStyle(color: Colors.grey, fontSize: 13),
             ),
-            const Text(
-              'Colombo, Sri Lanka',
-              style: TextStyle(color: Colors.grey, fontSize: 13),
-            ),
             const SizedBox(height: 16),
 
-            // ── CROWD CHART (REAL-TIME) ──
-            const CrowdChartWidget(),
+            // ── CROWD CHART — pass live location ──
+            // Shows skeleton while location is loading
+            if (!_locationLoaded)
+              Container(
+                height: 200,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B0000),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                      SizedBox(height: 10),
+                      Text('Getting your location...',
+                          style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12)),
+                    ],
+                  ),
+                ),
+              )
+            else
+              CrowdChartWidget(
+                userLat: _userPosition?.latitude ?? 6.9271,
+                userLng: _userPosition?.longitude ?? 79.8612,
+                radiusKm: 5.0, // only stations within 5km
+              ),
+
             const SizedBox(height: 16),
 
             // ── FUEL PRICES ──
@@ -126,20 +195,6 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  String _daySuffix(int day) {
-    if (day >= 11 && day <= 13) return 'th';
-    switch (day % 10) {
-      case 1:
-        return 'st';
-      case 2:
-        return 'nd';
-      case 3:
-        return 'rd';
-      default:
-        return 'th';
-    }
-  }
-
   // ───────── DRAWER ─────────
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
@@ -153,45 +208,41 @@ class HomeScreen extends StatelessWidget {
                 () => Navigator.pop(context)),
             _drawerItem(context, Icons.label, 'Price', () {
               Navigator.pop(context);
-              Navigator.push(
-                  context,
+              Navigator.push(context,
                   MaterialPageRoute(
                       builder: (_) => const PriceScreen()));
             }),
             _drawerItem(context, Icons.location_on, 'Stations',
                 () {
               Navigator.pop(context);
-              Navigator.push(
-                  context,
+              Navigator.push(context,
                   MaterialPageRoute(
                       builder: (_) => const StationsScreen()));
             }),
             _drawerItem(context, Icons.notifications, 'Alerts',
                 () {
               Navigator.pop(context);
-              Navigator.push(
-                  context,
+              Navigator.push(context,
                   MaterialPageRoute(
                       builder: (_) => const AlertsScreen()));
             }),
             _drawerItem(context, Icons.help_outline, 'Help', () {
               Navigator.pop(context);
-              Navigator.push(
-                  context,
+              Navigator.push(context,
                   MaterialPageRoute(
                       builder: (_) => const HelpScreen()));
             }),
             _drawerItem(context, Icons.settings, 'Settings', () {
               Navigator.pop(context);
-              Navigator.push(
-                  context,
+              Navigator.push(context,
                   MaterialPageRoute(
                       builder: (_) => const SettingsScreen()));
             }),
             const SizedBox(height: 20),
-            _drawerItem(context, Icons.logout, 'Log out', () async {
-              final provider =
-                  Provider.of<UserProvider>(context, listen: false);
+            _drawerItem(context, Icons.logout, 'Log out',
+                () async {
+              final provider = Provider.of<UserProvider>(
+                  context, listen: false);
               await provider.signOut();
               if (!context.mounted) return;
               Navigator.pushAndRemoveUntil(
@@ -211,13 +262,11 @@ class HomeScreen extends StatelessWidget {
       String title, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon, color: Colors.white, size: 28),
-      title: Text(
-        title,
-        style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold),
-      ),
+      title: Text(title,
+          style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold)),
       onTap: onTap,
     );
   }
@@ -246,11 +295,9 @@ class HomeScreen extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const PriceScreen()),
-              ),
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(
+                      builder: (_) => const PriceScreen())),
               child: const Text('View more>>',
                   style: TextStyle(
                       color: Colors.white, fontSize: 12)),
@@ -274,18 +321,17 @@ class HomeScreen extends StatelessWidget {
           children: [
             Text(name,
                 style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 14)),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14)),
             const SizedBox(height: 4),
-            Text(
-              price,
-              style: TextStyle(
-                color: highlight
-                    ? Colors.red
-                    : const Color(0xFF8B0000),
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
+            Text(price,
+                style: TextStyle(
+                  color: highlight
+                      ? Colors.red
+                      : const Color(0xFF8B0000),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                )),
           ],
         ),
       ),
@@ -303,13 +349,11 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Find nearby stations',
-            style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16),
-          ),
+          const Text('Find nearby stations',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
           const SizedBox(height: 12),
           _stationCard(context, 'Laugfs station'),
           const SizedBox(height: 8),
@@ -318,11 +362,9 @@ class HomeScreen extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const StationsScreen()),
-              ),
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(
+                      builder: (_) => const StationsScreen())),
               child: const Text('See all>>',
                   style: TextStyle(
                       color: Colors.white, fontSize: 12)),
@@ -335,11 +377,9 @@ class HomeScreen extends StatelessWidget {
 
   Widget _stationCard(BuildContext context, String name) {
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) => const StationsScreen()),
-      ),
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(
+              builder: (_) => const StationsScreen())),
       child: Container(
         padding: const EdgeInsets.symmetric(
             horizontal: 12, vertical: 10),
@@ -358,7 +398,8 @@ class HomeScreen extends StatelessWidget {
             ),
             const Text('View on map>>',
                 style: TextStyle(
-                    color: Color(0xFF8B0000), fontSize: 12)),
+                    color: Color(0xFF8B0000),
+                    fontSize: 12)),
           ],
         ),
       ),

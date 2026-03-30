@@ -18,8 +18,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-
-        // ✅ BACK BUTTON (replaces hamburger menu)
+        // ✅ This prevents Flutter from auto-showing the drawer burger icon
+        automaticallyImplyLeading: false,
         leading: IconButton(
           icon: Container(
             padding: const EdgeInsets.all(8),
@@ -32,12 +32,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-
-        title: const Text(
-          'Settings',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-
+        title: const Text('Settings',
+            style: TextStyle(
+                color: Colors.black, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: Container(
@@ -57,21 +54,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Account & privacy',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            const Text('Account & privacy',
+                style: TextStyle(
+                    fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
 
             // ── CHANGE PASSWORD ──
             GestureDetector(
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+                MaterialPageRoute(
+                    builder: (_) => const ChangePasswordScreen()),
               ),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 16),
                 decoration: BoxDecoration(
                   color: const Color(0xFF8B0000),
                   borderRadius: BorderRadius.circular(12),
@@ -80,14 +77,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Icon(Icons.key, color: Colors.white, size: 22),
                     SizedBox(width: 12),
-                    Text(
-                      'Change Password',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    Text('Change Password',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),
@@ -96,28 +90,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // ── TOUCH ID ──
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               decoration: BoxDecoration(
                 color: const Color(0xFF8B0000),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.fingerprint, color: Colors.white, size: 22),
+                  const Icon(Icons.fingerprint,
+                      color: Colors.white, size: 22),
                   const SizedBox(width: 12),
                   const Expanded(
-                    child: Text(
-                      'Use touch ID to unlock',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    child: Text('Use touch ID to unlock',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500)),
                   ),
                   Switch(
                     value: _touchIdEnabled,
-                    onChanged: (val) => setState(() => _touchIdEnabled = val),
+                    onChanged: (val) =>
+                        setState(() => _touchIdEnabled = val),
                     activeColor: Colors.white,
                     activeTrackColor: Colors.white38,
                     inactiveThumbColor: Colors.white54,

@@ -32,12 +32,16 @@ class AuthService {
     }
   }
 
-  // ── REGISTER STATION ──
+  // ── REGISTER STATION ✅ Now saves lat/lng + full station data ──
   static Future<Map<String, dynamic>> registerStation({
     required String firstName,
     required String lastName,
     required String email,
     required String password,
+    required String stationName,
+    required String address,
+    required double latitude,
+    required double longitude,
   }) async {
     try {
       final cred = await _auth.createUserWithEmailAndPassword(
@@ -48,6 +52,26 @@ class AuthService {
         'email': email,
         'role': 'station',
         'createdAt': FieldValue.serverTimestamp(),
+        // ✅ Station identity
+        'stationName': stationName,
+        'address': address,
+        // ✅ GPS location — used for nearby station search
+        'latitude': latitude,
+        'longitude': longitude,
+        // ✅ Fuel & stock data
+        'fuelPrices': {},
+        'stock': {
+          'petrol': 0.0,
+          'diesel': 0.0,
+          'superDiesel': 0.0,
+          'kerosene': 0.0,
+        },
+        // ✅ Business metrics
+        'totalRevenue': 0.0,
+        'totalRatings': 0,
+        'ratingSum': 0.0,
+        'averageRating': 0.0,
+        'isOpen': true,
       });
       return {'success': true, 'uid': cred.user!.uid};
     } on FirebaseAuthException catch (e) {
@@ -127,11 +151,8 @@ class AuthService {
   }
 
   // ── SIGN OUT ──
-  static Future<void> signOut() async {
-    await _auth.signOut();
-  }
+  static Future<void> signOut() async => await _auth.signOut();
 
-  // ── ERROR MESSAGES ──
   static String _authError(String code) {
     switch (code) {
       case 'user-not-found':

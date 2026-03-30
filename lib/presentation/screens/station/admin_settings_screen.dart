@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../auth/forgot_password_screen.dart';
+import '../settings/change_password_screen.dart'; // ✅ correct import
 
 class AdminSettingsScreen extends StatefulWidget {
   const AdminSettingsScreen({super.key});
@@ -18,6 +18,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF8B0000),
         elevation: 0,
+        automaticallyImplyLeading: false, // ✅ prevents burger menu
         leading: IconButton(
           icon: Container(
             padding: const EdgeInsets.all(8),
@@ -32,11 +33,10 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         ),
         title: const Text(
           'Admin Settings',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-
-        // ✅ removed right-side icons
         actions: const [],
       ),
       body: Padding(
@@ -46,18 +46,21 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
           children: [
             const Text(
               'Account & Privacy',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
-            // Change Password
+            // ✅ Now correctly navigates to ChangePasswordScreen
             GestureDetector(
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                MaterialPageRoute(
+                    builder: (_) => const ChangePasswordScreen()),
               ),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 16),
                 decoration: BoxDecoration(
                   color: const Color(0xFF8B0000),
                   borderRadius: BorderRadius.circular(12),
@@ -82,14 +85,16 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
 
             // Use Fingerprint
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 4),
               decoration: BoxDecoration(
                 color: const Color(0xFF8B0000),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.fingerprint, color: Colors.white, size: 22),
+                  const Icon(Icons.fingerprint,
+                      color: Colors.white, size: 22),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Text(
@@ -103,7 +108,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   ),
                   Switch(
                     value: _useFingerprint,
-                    onChanged: (val) => setState(() => _useFingerprint = val),
+                    onChanged: (val) =>
+                        setState(() => _useFingerprint = val),
                     activeColor: Colors.white,
                     activeTrackColor: Colors.white38,
                   ),
