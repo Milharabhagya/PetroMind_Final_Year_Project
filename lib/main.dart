@@ -5,7 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
-import 'services/user_provider.dart';
+import 'package:petromind/data/services/user_provider.dart';
+import 'package:petromind/data/services/road_alert_service.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/fuel_price_provider.dart';
 import 'presentation/providers/station_provider.dart';
@@ -17,6 +18,9 @@ import 'presentation/screens/auth/auth_screen.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'presentation/screens/station/station_dashboard_screen.dart';
 
+final GlobalKey<NavigatorState> navigatorKey =
+    GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -24,12 +28,15 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // ✅ Fix Firestore 400 Bad Request + QUIC errors on Flutter Web
   if (kIsWeb) {
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: false,
       sslEnabled: true,
     );
+  }
+
+  if (!kIsWeb) {
+    await RoadAlertService().init();
   }
 
   runApp(const MyApp());
@@ -42,31 +49,29 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-            create: (_) => UserProvider()),
-        ChangeNotifierProvider(
-            create: (_) => AppAuthProvider()),
-        ChangeNotifierProvider(
-            create: (_) => FuelPriceProvider()),
-        ChangeNotifierProvider(
-            create: (_) => StationProvider()),
-        ChangeNotifierProvider(
-            create: (_) => AlertProvider()),
-        ChangeNotifierProvider(
-            create: (_) => ComplaintProvider()),
-        ChangeNotifierProvider(
-            create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => AppAuthProvider()),
+        ChangeNotifierProvider(create: (_) => FuelPriceProvider()),
+        ChangeNotifierProvider(create: (_) => StationProvider()),
+        ChangeNotifierProvider(create: (_) => AlertProvider()),
+        ChangeNotifierProvider(create: (_) => ComplaintProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
       ],
-      child: MaterialApp(
-        title: 'PetroMind',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF8B0000)),
-          useMaterial3: true,
-        ),
-        home: const SplashScreen(),
-      ),
+      // ✅ builder gives a new context INSIDE MultiProvider
+      // so every route pushed via navigatorKey inherits providers
+      builder: (context, child) {
+        return MaterialApp(
+          title: 'PetroMind',
+          debugShowCheckedModeBanner: false,
+          navigatorKey: navigatorKey,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xFF8B0000)),
+            useMaterial3: true,
+          ),
+          home: const SplashScreen(),
+        );
+      },
     );
   }
 }
@@ -75,8 +80,7 @@ class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() =>
-      _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> {
@@ -97,25 +101,21 @@ class _SplashScreenState extends State<SplashScreen> {
       Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-              builder: (_) =>
-                  const OnboardingScreen()));
+              builder: (_) => const OnboardingScreen()));
       return;
     }
 
     try {
       final db = FirebaseFirestore.instance;
 
-      final userDoc = await db
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      final userDoc =
+          await db.collection('users').doc(user.uid).get();
 
       if (userDoc.exists &&
           userDoc.data()?['role'] == 'customer') {
         if (!mounted) return;
-        final provider = Provider.of<UserProvider>(
-            context,
-            listen: false);
+        final provider =
+            Provider.of<UserProvider>(context, listen: false);
         await provider.loadUserData();
         if (!mounted) return;
         Navigator.pushReplacement(
@@ -125,17 +125,14 @@ class _SplashScreenState extends State<SplashScreen> {
         return;
       }
 
-      final stationDoc = await db
-          .collection('stations')
-          .doc(user.uid)
-          .get();
+      final stationDoc =
+          await db.collection('stations').doc(user.uid).get();
 
       if (stationDoc.exists &&
           stationDoc.data()?['role'] == 'station') {
         if (!mounted) return;
-        final provider = Provider.of<UserProvider>(
-            context,
-            listen: false);
+        final provider =
+            Provider.of<UserProvider>(context, listen: false);
         await provider.loadStationData();
         if (!mounted) return;
         Navigator.pushReplacement(
@@ -146,8 +143,6 @@ class _SplashScreenState extends State<SplashScreen> {
         return;
       }
     } catch (e) {
-      // ✅ Handle Firestore errors gracefully
-      // If Firestore fails, just go to AuthScreen
       print('Firestore auth check error: $e');
     }
 

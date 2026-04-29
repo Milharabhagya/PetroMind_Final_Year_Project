@@ -1,30 +1,96 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class StationNotificationsScreen extends StatelessWidget {
+class StationNotificationsScreen extends StatefulWidget {
   const StationNotificationsScreen({super.key});
 
-  final List<Map<String, String>> notifications = const [
-    {
-      'type': 'Priority',
-      'msg': 'Low Stock Alert: Diesel - 120L remaining',
-      'date': '22/03/2026  12:09:09'
-    },
-    {
-      'type': 'Priority',
-      'msg': 'Fuel delivery received: 4,500L added',
-      'date': '22/03/2026  12:09:09'
-    },
-    {
-      'type': 'Priority',
-      'msg': 'New customer review received',
-      'date': '22/03/2026  12:09:09'
-    },
-    {
-      'type': 'Priority',
-      'msg': 'Petrol 92 stock successfully updated',
-      'date': '22/03/2026  12:09:09'
-    },
-  ];
+  @override
+  State<StationNotificationsScreen> createState() =>
+      _StationNotificationsScreenState();
+}
+
+class _StationNotificationsScreenState
+    extends State<StationNotificationsScreen> {
+  final _db = FirebaseFirestore.instance;
+  String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
+
+  // Notification type config: icon, color, label
+  _NotifStyle _styleFor(String type) {
+    switch (type) {
+      case 'price_change':
+        return _NotifStyle(
+          icon: Icons.attach_money,
+          color: Colors.amberAccent,
+          label: 'Price Update',
+        );
+      case 'low_stock':
+        return _NotifStyle(
+          icon: Icons.warning_amber_rounded,
+          color: Colors.orangeAccent,
+          label: 'Low Stock',
+        );
+      case 'new_review':
+        return _NotifStyle(
+          icon: Icons.star_rounded,
+          color: Colors.lightBlueAccent,
+          label: 'New Review',
+        );
+      case 'stock_update':
+        return _NotifStyle(
+          icon: Icons.inventory_2_rounded,
+          color: Colors.greenAccent,
+          label: 'Stock Updated',
+        );
+      case 'fuel_news':
+        return _NotifStyle(
+          icon: Icons.newspaper_rounded,
+          color: Colors.purpleAccent,
+          label: 'Fuel News',
+        );
+      default:
+        return _NotifStyle(
+          icon: Icons.notifications_rounded,
+          color: Colors.white70,
+          label: 'Alert',
+        );
+    }
+  }
+
+  String _formatTime(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dt.day}/${dt.month}/${dt.year}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _markAllRead() async {
+    if (_uid.isEmpty) return;
+    final snap = await _db
+        .collection('stations')
+        .doc(_uid)
+        .collection('notifications')
+        .where('read', isEqualTo: false)
+        .get();
+    final batch = _db.batch();
+    for (final doc in snap.docs) {
+      batch.update(doc.reference, {'read': true});
+    }
+    await batch.commit();
+  }
+
+  Future<void> _markRead(String docId) async {
+    if (_uid.isEmpty) return;
+    await _db
+        .collection('stations')
+        .doc(_uid)
+        .collection('notifications')
+        .doc(docId)
+        .update({'read': true});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,58 +113,173 @@ class StationNotificationsScreen extends StatelessWidget {
         ),
         title: const Text(
           'Notifications',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style:
+              TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        actions: [
+          TextButton(
+            onPressed: _markAllRead,
+            child: const Text(
+              'Mark all read',
+              style: TextStyle(color: Colors.white70, fontSize: 11),
+            ),
+          ),
+        ],
+      ),
+      body: _uid.isEmpty
+          ? const Center(
+              child: Text('Not logged in',
+                  style: TextStyle(color: Colors.white)))
+          : StreamBuilder<QuerySnapshot>(
+              stream: _db
+                  .collection('stations')
+                  .doc(_uid)
+                  .collection('notifications')
+                  .orderBy('timestamp', descending: true)
+                  .limit(50)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  );
+                }
 
-        // ✅ removed right-side icons
-        actions: const [],
-      ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: notifications.length,
-        itemBuilder: (context, index) {
-          final n = notifications[index];
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF6B0000),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        n['type'] ?? '',
-                        style: const TextStyle(color: Colors.white, fontSize: 10),
-                      ),
+                final docs = snapshot.data!.docs;
+
+                if (docs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.notifications_off_rounded,
+                            color: Colors.white24, size: 48),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'No notifications yet',
+                          style: TextStyle(
+                              color: Colors.white54, fontSize: 14),
+                        ),
+                      ],
                     ),
-                    const Spacer(),
-                    Text(
-                      n['date'] ?? '',
-                      style: const TextStyle(color: Colors.white54, fontSize: 10),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  n['msg'] ?? '',
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
-                ),
-              ],
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final doc = docs[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    final type = data['type'] as String? ?? 'general';
+                    final msg = data['message'] as String? ?? '';
+                    final isRead = data['read'] as bool? ?? false;
+                    final ts = data['timestamp'] as Timestamp?;
+                    final timeStr =
+                        ts != null ? _formatTime(ts.toDate()) : '';
+                    final style = _styleFor(type);
+
+                    return GestureDetector(
+                      onTap: () {
+                        if (!isRead) _markRead(doc.id);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isRead
+                              ? const Color(0xFF5A0000)
+                              : const Color(0xFF6B0000),
+                          borderRadius: BorderRadius.circular(10),
+                          border: isRead
+                              ? null
+                              : Border.all(
+                                  color: style.color.withOpacity(0.4),
+                                  width: 1),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                // Type badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        style.color.withOpacity(0.2),
+                                    borderRadius:
+                                        BorderRadius.circular(4),
+                                    border: Border.all(
+                                        color: style.color
+                                            .withOpacity(0.6),
+                                        width: 1),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(style.icon,
+                                          color: style.color, size: 10),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        style.label,
+                                        style: TextStyle(
+                                            color: style.color,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Spacer(),
+                                // Unread dot
+                                if (!isRead)
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    margin: const EdgeInsets.only(right: 8),
+                                    decoration: BoxDecoration(
+                                      color: style.color,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                Text(
+                                  timeStr,
+                                  style: const TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: 10),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              msg,
+                              style: TextStyle(
+                                color: isRead
+                                    ? Colors.white60
+                                    : Colors.white,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
+}
+
+class _NotifStyle {
+  final IconData icon;
+  final Color color;
+  final String label;
+  _NotifStyle(
+      {required this.icon, required this.color, required this.label});
 }

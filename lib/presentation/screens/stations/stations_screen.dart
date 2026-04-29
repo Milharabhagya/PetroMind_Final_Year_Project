@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:js' as js;
 import 'dart:async';
 import 'dart:ui_web' as ui;
 import 'dart:html' as html;
 import 'station_detail_screen.dart';
 import '../profile/profile_screen.dart';
+import '../../../data/models/road_alert_model.dart';
+import '../../../data/services/road_alert_service.dart';
+import '../../widgets/report_alert_sheet.dart'; // ✅ FIXED
 
 class StationsScreen extends StatefulWidget {
   const StationsScreen({super.key});
@@ -16,7 +20,8 @@ class StationsScreen extends StatefulWidget {
       _StationsScreenState();
 }
 
-class _StationsScreenState extends State<StationsScreen> {
+class _StationsScreenState
+    extends State<StationsScreen> {
   final TextEditingController _searchController =
       TextEditingController();
 
@@ -26,7 +31,15 @@ class _StationsScreenState extends State<StationsScreen> {
   bool _loadingStations = false;
   List<Map<String, dynamic>> _nearbyStations = [];
 
-  static const String _mapId = 'petromind-leaflet-map';
+  // ✅ Road alert fields
+  final RoadAlertService _alertService =
+      RoadAlertService();
+  StreamSubscription<List<RoadAlert>>?
+      _alertSubscription;
+  List<RoadAlert> _activeAlerts = [];
+
+  static const String _mapId =
+      'petromind-leaflet-map';
   static bool _mapRegistered = false;
 
   @override
@@ -34,6 +47,106 @@ class _StationsScreenState extends State<StationsScreen> {
     super.initState();
     _registerMap();
     _getCurrentLocation();
+  }
+
+  // ✅ Start listening to nearby alerts from Firestore
+  void _startAlertListener() {
+    _alertSubscription?.cancel();
+    _alertSubscription = _alertService
+        .getNearbyAlerts(
+          userLat: _currentLat,
+          userLng: _currentLng,
+        )
+        .listen((alerts) {
+      if (mounted) {
+        setState(() => _activeAlerts = alerts);
+        _updateAlertMarkersOnMap(alerts);
+      }
+    });
+  }
+
+  // ✅ Add alert markers to Leaflet map
+  void _updateAlertMarkersOnMap(
+      List<RoadAlert> alerts) {
+    if (!kIsWeb) return;
+
+    // Clear existing alert markers
+    js.context.callMethod('eval', ['''
+      if (window._alertMarkers) {
+        window._alertMarkers.forEach(function(m) {
+          window._leafletMap.removeLayer(m);
+        });
+      }
+      window._alertMarkers = [];
+    ''']);
+
+    // Add new alert markers
+    for (final alert in alerts) {
+      final emoji = _alertEmoji(alert.type);
+      final label = _alertLabel(alert.type);
+      final color = _alertColorHex(alert.type);
+      final timeAgo = _timeAgo(alert.reportedAt);
+      final lat = alert.lat;
+      final lng = alert.lng;
+      final desc = (alert.description ?? '')
+          .replaceAll("'", "\\'")
+          .replaceAll('"', '\\"');
+
+      js.context.callMethod('eval', ['''
+        (function() {
+          if (!window._leafletMap) return;
+          var alertIcon = L.divIcon({
+            html: '<div style="background:$color;color:white;font-size:18px;width:36px;height:36px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;line-height:36px;text-align:center;">$emoji</div>',
+            iconSize: [36, 36],
+            iconAnchor: [18, 18],
+            className: ""
+          });
+          var popup = "<b style='color:$color'>$label</b><br>${desc.isNotEmpty ? desc + '<br>' : ''}<small>$timeAgo · ${alert.upvotes} confirmations</small>";
+          var marker = L.marker([$lat, $lng], { icon: alertIcon })
+            .addTo(window._leafletMap)
+            .bindPopup(popup);
+          window._alertMarkers.push(marker);
+        })();
+      ''']);
+    }
+  }
+
+  String _alertEmoji(String type) {
+    switch (type) {
+      case 'accident': return '🚨';
+      case 'police': return '🚔';
+      case 'roadblock': return '🚧';
+      case 'traffic': return '🚦';
+      default: return '⚠️';
+    }
+  }
+
+  String _alertLabel(String type) {
+    switch (type) {
+      case 'accident': return 'Accident';
+      case 'police': return 'Police Checkpoint';
+      case 'roadblock': return 'Road Block';
+      case 'traffic': return 'Heavy Traffic';
+      default: return 'Alert';
+    }
+  }
+
+  String _alertColorHex(String type) {
+    switch (type) {
+      case 'accident': return '#D32F2F';
+      case 'police': return '#1565C0';
+      case 'roadblock': return '#E65100';
+      case 'traffic': return '#F9A825';
+      default: return '#616161';
+    }
+  }
+
+  String _timeAgo(DateTime time) {
+    final diff = DateTime.now().difference(time);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60)
+      return '${diff.inMinutes} min ago';
+    return '${diff.inHours} hr ago';
   }
 
   void _registerMap() {
@@ -88,6 +201,7 @@ class _StationsScreenState extends State<StationsScreen> {
 
           window._leafletMap = map;
           window._leafletMarkers = [];
+          window._alertMarkers = [];
           window._routeLine = null;
 
           var userIcon = L.divIcon({
@@ -136,6 +250,7 @@ class _StationsScreenState extends State<StationsScreen> {
           setState(() => _locationLoaded = true);
           _loadNearbyStations(
               _currentLat, _currentLng);
+          _startAlertListener(); // ✅
         }
         return;
       }
@@ -154,11 +269,13 @@ class _StationsScreenState extends State<StationsScreen> {
         _moveMapTo(_currentLat, _currentLng);
         _updateUserMarker(_currentLat, _currentLng);
         _loadNearbyStations(_currentLat, _currentLng);
+        _startAlertListener(); // ✅
       }
     } catch (e) {
       if (mounted) {
         setState(() => _locationLoaded = true);
         _loadNearbyStations(_currentLat, _currentLng);
+        _startAlertListener(); // ✅
       }
     }
   }
@@ -178,7 +295,6 @@ class _StationsScreenState extends State<StationsScreen> {
     ]);
   }
 
-  // ✅ FIXED: accepts dynamic instead of js.JsArray
   Future<List<Map<String, dynamic>>> _callJsAsync(
       String fn, List<dynamic> args) async {
     final completer =
@@ -187,8 +303,6 @@ class _StationsScreenState extends State<StationsScreen> {
         'cb_${DateTime.now().millisecondsSinceEpoch}';
     final errorId = 'err_$callbackId';
 
-    // ✅ Use dynamic to handle both Overpass and
-    // Nominatim responses
     js.context[callbackId] =
         js.allowInterop((dynamic result) {
       final List<Map<String, dynamic>> stations = [];
@@ -211,7 +325,6 @@ class _StationsScreenState extends State<StationsScreen> {
             try { rating = (item['rating'] as num).toDouble(); } catch (_) {}
             try { placeId = item['placeId']?.toString() ?? 'unknown_$i'; } catch (_) {}
 
-            // ✅ Only add if coordinates are valid
             if (itemLat != _currentLat ||
                 itemLng != _currentLng) {
               stations.add({
@@ -228,9 +341,7 @@ class _StationsScreenState extends State<StationsScreen> {
                 'hasOctane98': false,
               });
             }
-          } catch (e) {
-            // Skip bad items silently
-          }
+          } catch (e) {}
         }
       } catch (e) {
         print('❌ Parse error: $e');
@@ -333,9 +444,10 @@ class _StationsScreenState extends State<StationsScreen> {
           }
         } catch (e) {
           if (!geocodeCompleter.isCompleted) {
-            geocodeCompleter.complete(
-                {'lat': _currentLat,
-                 'lng': _currentLng});
+            geocodeCompleter.complete({
+              'lat': _currentLat,
+              'lng': _currentLng
+            });
           }
         }
         js.context.deleteProperty(cbId);
@@ -501,7 +613,8 @@ class _StationsScreenState extends State<StationsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
                 color: Colors.grey[300],
                 borderRadius:
@@ -735,6 +848,7 @@ class _StationsScreenState extends State<StationsScreen> {
 
   @override
   void dispose() {
+    _alertSubscription?.cancel(); // ✅
     _searchController.dispose();
     if (kIsWeb) {
       js.context.callMethod('eval', ['''
@@ -743,6 +857,7 @@ class _StationsScreenState extends State<StationsScreen> {
           window._leafletMap = null;
           window._userMarker = null;
           window._leafletMarkers = [];
+          window._alertMarkers = [];
           window._routeLine = null;
         }
       ''']);
@@ -777,6 +892,45 @@ class _StationsScreenState extends State<StationsScreen> {
                 color: Colors.black,
                 fontWeight: FontWeight.bold)),
         actions: [
+          // ✅ Alert count badge
+          if (_activeAlerts.isNotEmpty)
+            Padding(
+              padding:
+                  const EdgeInsets.only(right: 4),
+              child: Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                        Icons.warning_amber,
+                        color: Color(0xFF8B0000)),
+                    onPressed: () =>
+                        _showAlertsList(context),
+                    tooltip: 'Road Alerts',
+                  ),
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      padding:
+                          const EdgeInsets.all(3),
+                      decoration:
+                          const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${_activeAlerts.length}',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight:
+                                FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           IconButton(
             icon: Container(
               padding: const EdgeInsets.all(8),
@@ -902,43 +1056,167 @@ class _StationsScreenState extends State<StationsScreen> {
               ),
             ),
 
-          // ── VIEW STATIONS BUTTON ──
+          // ── BOTTOM BUTTONS ──
           Positioned(
             bottom: 20,
             left: 12,
             right: 12,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    const Color(0xFF8B0000),
-                disabledBackgroundColor:
-                    Colors.grey[400],
-                padding: const EdgeInsets.symmetric(
-                    vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(12)),
-              ),
-              icon: const Icon(
-                  Icons.local_gas_station,
-                  color: Colors.white),
-              label: Text(
-                _loadingStations
-                    ? 'Searching stations...'
-                    : _nearbyStations.isEmpty
-                        ? 'No stations found nearby'
-                        : 'View ${_nearbyStations.length} Nearby Stations',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold),
-              ),
-              onPressed: (_loadingStations ||
-                      _nearbyStations.isEmpty)
-                  ? null
-                  : () => _showStationList(context),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ✅ Report Alert button
+                GestureDetector(
+                  onTap: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor:
+                        Colors.transparent,
+                    builder: (_) => ReportAlertSheet(
+                      userLat: _currentLat,
+                      userLng: _currentLng,
+                    ),
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    padding:
+                        const EdgeInsets.symmetric(
+                            vertical: 12),
+                    margin: const EdgeInsets.only(
+                        bottom: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius:
+                          BorderRadius.circular(12),
+                      border: Border.all(
+                          color: const Color(
+                              0xFF8B0000),
+                          width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black
+                              .withValues(alpha: 0.1),
+                          blurRadius: 6,
+                        )
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.warning_amber,
+                            color:
+                                Color(0xFF8B0000),
+                            size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'Report Road Alert',
+                          style: TextStyle(
+                            color:
+                                Color(0xFF8B0000),
+                            fontWeight:
+                                FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // View Stations button
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        const Color(0xFF8B0000),
+                    disabledBackgroundColor:
+                        Colors.grey[400],
+                    minimumSize: const Size(
+                        double.infinity, 50),
+                    padding:
+                        const EdgeInsets.symmetric(
+                            vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(
+                                12)),
+                  ),
+                  icon: const Icon(
+                      Icons.local_gas_station,
+                      color: Colors.white),
+                  label: Text(
+                    _loadingStations
+                        ? 'Searching stations...'
+                        : _nearbyStations.isEmpty
+                            ? 'No stations found nearby'
+                            : 'View ${_nearbyStations.length} Nearby Stations',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: (_loadingStations ||
+                          _nearbyStations.isEmpty)
+                      ? null
+                      : () =>
+                          _showStationList(context),
+                ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ✅ Show active alerts list
+  void _showAlertsList(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '⚠️ Active Road Alerts Nearby',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            ..._activeAlerts.map((alert) {
+              return ListTile(
+                leading: Text(
+                    _alertEmoji(alert.type),
+                    style: const TextStyle(
+                        fontSize: 24)),
+                title: Text(
+                    _alertLabel(alert.type),
+                    style: const TextStyle(
+                        fontWeight:
+                            FontWeight.bold)),
+                subtitle: Text(
+                  '${_timeAgo(alert.reportedAt)} · ${alert.upvotes} confirmations'
+                  '${alert.description != null ? '\n${alert.description}' : ''}',
+                ),
+                trailing: TextButton(
+                  onPressed: () {
+                    _alertService
+                        .upvoteAlert(alert.id);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('👍 Confirm'),
+                ),
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
@@ -949,11 +1227,13 @@ class _StationsScreenState extends State<StationsScreen> {
             _nearbyStations)
           ..sort((a, b) {
             final dA = Geolocator.distanceBetween(
-                _currentLat, _currentLng,
+                _currentLat,
+                _currentLng,
                 a['lat'] as double,
                 a['lng'] as double);
             final dB = Geolocator.distanceBetween(
-                _currentLat, _currentLng,
+                _currentLat,
+                _currentLng,
                 b['lat'] as double,
                 b['lng'] as double);
             return dA.compareTo(dB);
@@ -972,8 +1252,8 @@ class _StationsScreenState extends State<StationsScreen> {
                 station['lat'] as double,
                 station['lng'] as double);
             Future.delayed(
-                const Duration(milliseconds: 300),
-                () {
+                const Duration(
+                    milliseconds: 300), () {
               if (mounted) {
                 _showStationInfoPanel(station);
               }
@@ -1176,8 +1456,8 @@ class _StationListPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Row(children: [
-                        _fuelChip(
-                            'Petrol', Colors.green),
+                        _fuelChip('Petrol',
+                            Colors.green),
                         _fuelChip(
                             'Diesel', Colors.blue),
                         if (s['hasOctane98'] == true)
@@ -1204,7 +1484,8 @@ class _StationListPage extends StatelessWidget {
                   children: [
                     Text(dist,
                         style: const TextStyle(
-                            color: Color(0xFF8B0000),
+                            color:
+                                Color(0xFF8B0000),
                             fontSize: 12,
                             fontWeight:
                                 FontWeight.bold)),

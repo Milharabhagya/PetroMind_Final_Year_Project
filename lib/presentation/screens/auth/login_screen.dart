@@ -5,7 +5,7 @@ import '../station/station_dashboard_screen.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 import '../../../services/auth_service.dart';
-import '../../../services/user_provider.dart';
+import '../../../data/services/user_provider.dart'; // ✅ FIXED
 import '../../../services/auto_crowd_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -71,15 +71,17 @@ class _LoginScreenState extends State<LoginScreen> {
         : await AuthService.loginCustomer(
             email: email, password: password);
 
+    // ✅ Check mounted after every await
     if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (result['success']) {
+      // ✅ context is safe here — MultiProvider.builder
+      // guarantees providers are always accessible
       final provider =
           Provider.of<UserProvider>(context, listen: false);
 
       if (widget.isStation) {
-        // Station login — no crowd logging needed
         await provider.loadStationData();
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(
@@ -89,14 +91,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     const StationDashboardScreen()),
             (route) => false);
       } else {
-        // Customer login — auto-log crowd in background
         await provider.loadUserData();
         if (!mounted) return;
-
-        // ✅ Runs in background — does NOT block navigation
-        // Finds stations near user and auto-logs crowd level
         AutoCrowdService.autoLogCrowdOnLogin();
-
         Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
@@ -129,8 +126,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color:
-                            Colors.white.withOpacity(0.15),
+                        color: Colors.white
+                            .withOpacity(0.15),
                         borderRadius:
                             BorderRadius.circular(10),
                       ),
@@ -181,7 +178,8 @@ class _LoginScreenState extends State<LoginScreen> {
               Container(
                 decoration: BoxDecoration(
                     color: const Color(0xFFD9D9D9),
-                    borderRadius: BorderRadius.circular(10)),
+                    borderRadius:
+                        BorderRadius.circular(10)),
                 child: TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -203,7 +201,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             horizontal: 16, vertical: 14),
                     suffixIcon: _emailValid
                         ? Container(
-                            margin: const EdgeInsets.all(10),
+                            margin:
+                                const EdgeInsets.all(10),
                             decoration: const BoxDecoration(
                                 color: Colors.black,
                                 shape: BoxShape.circle),
@@ -224,7 +223,8 @@ class _LoginScreenState extends State<LoginScreen> {
               Container(
                 decoration: BoxDecoration(
                     color: const Color(0xFFD9D9D9),
-                    borderRadius: BorderRadius.circular(10)),
+                    borderRadius:
+                        BorderRadius.circular(10)),
                 child: TextField(
                   controller: _passwordController,
                   obscureText: !_showPassword,
@@ -265,8 +265,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius:
                           BorderRadius.circular(8),
                       border: Border.all(
-                          color:
-                              Colors.red.withOpacity(0.5))),
+                          color: Colors.red
+                              .withOpacity(0.5))),
                   child: Row(children: [
                     const Icon(Icons.error_outline,
                         color: Colors.white, size: 16),

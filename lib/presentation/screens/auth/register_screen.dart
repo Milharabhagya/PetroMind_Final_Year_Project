@@ -4,7 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import '../home/home_screen.dart';
 import '../station/station_dashboard_screen.dart';
 import '../../../services/auth_service.dart';
-import '../../../services/user_provider.dart';
+import '../../../data/services/user_provider.dart'; // ✅ FIXED
 import '../../../services/auto_crowd_service.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -21,8 +21,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-
-  // ✅ Station-only fields
   final _stationNameController = TextEditingController();
   final _addressController = TextEditingController();
 
@@ -42,16 +40,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // ✅ Get GPS location with permission handling
   Future<Position?> _getCurrentLocation() async {
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      bool serviceEnabled =
+          await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         _showError('Please enable GPS/location services.');
         return null;
       }
-
-      LocationPermission permission = await Geolocator.checkPermission();
+      LocationPermission permission =
+          await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
@@ -60,10 +58,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
       }
       if (permission == LocationPermission.deniedForever) {
-        _showError('Location permission permanently denied. Enable in settings.');
+        _showError(
+            'Location permission permanently denied. Enable in settings.');
         return null;
       }
-
       return await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -78,13 +76,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final lastName = _lastNameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
-    final confirmPassword = _confirmPasswordController.text.trim();
+    final confirmPassword =
+        _confirmPasswordController.text.trim();
 
-    // ✅ Extra validation for station fields
     if (widget.isStation) {
       if (_stationNameController.text.trim().isEmpty ||
           _addressController.text.trim().isEmpty) {
-        _showError('Please fill in station name and address.');
+        _showError(
+            'Please fill in station name and address.');
         return;
       }
     }
@@ -115,13 +114,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     Map<String, dynamic> result;
 
     if (widget.isStation) {
-      // ✅ Get GPS location before registering station
       final position = await _getCurrentLocation();
       if (position == null) {
         setState(() => _isLoading = false);
         return;
       }
-
       result = await AuthService.registerStation(
         firstName: firstName,
         lastName: lastName,
@@ -141,18 +138,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
     }
 
+    // ✅ Check mounted after every await
     if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (result['success']) {
-      final provider = Provider.of<UserProvider>(context, listen: false);
+      // ✅ context is safe — MultiProvider.builder guarantees this
+      final provider =
+          Provider.of<UserProvider>(context, listen: false);
 
       if (widget.isStation) {
         await provider.loadStationData();
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const StationDashboardScreen()),
+          MaterialPageRoute(
+              builder: (_) =>
+                  const StationDashboardScreen()),
           (route) => false,
         );
       } else {
@@ -161,7 +163,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         AutoCrowdService.autoLogCrowdOnLogin();
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          MaterialPageRoute(
+              builder: (_) => const HomeScreen()),
           (route) => false,
         );
       }
@@ -172,7 +175,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red[700]),
+      SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red[700]),
     );
   }
 
@@ -186,20 +191,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top bar
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment:
+                    MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
+                        color:
+                            Colors.white.withOpacity(0.2),
+                        borderRadius:
+                            BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.arrow_back_ios,
-                          color: Colors.white, size: 16),
+                      child: const Icon(
+                          Icons.arrow_back_ios,
+                          color: Colors.white,
+                          size: 16),
                     ),
                   ),
                   Image.asset(
@@ -213,43 +222,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ],
               ),
               const SizedBox(height: 32),
-
               Text(
-                widget.isStation ? 'Create Station Account' : 'Create Account',
+                widget.isStation
+                    ? 'Create Station Account'
+                    : 'Create Account',
                 style: const TextStyle(
                     color: Colors.white,
                     fontSize: 28,
                     fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 24),
-
               const Text('First name',
-                  style: TextStyle(color: Colors.white, fontSize: 14)),
+                  style: TextStyle(
+                      color: Colors.white, fontSize: 14)),
               const SizedBox(height: 8),
-              _buildField(_firstNameController, 'Enter your first name'),
+              _buildField(_firstNameController,
+                  'Enter your first name'),
               const SizedBox(height: 16),
-
               const Text('Last name',
-                  style: TextStyle(color: Colors.white, fontSize: 14)),
+                  style: TextStyle(
+                      color: Colors.white, fontSize: 14)),
               const SizedBox(height: 8),
-              _buildField(_lastNameController, 'Enter your last name'),
+              _buildField(_lastNameController,
+                  'Enter your last name'),
               const SizedBox(height: 16),
-
-              // ✅ Station-only fields shown conditionally
               if (widget.isStation) ...[
                 const Text('Station name',
-                    style: TextStyle(color: Colors.white, fontSize: 14)),
+                    style: TextStyle(
+                        color: Colors.white, fontSize: 14)),
                 const SizedBox(height: 8),
-                _buildField(_stationNameController, 'e.g. Ceypetco Homagama'),
+                _buildField(_stationNameController,
+                    'e.g. Ceypetco Homagama'),
                 const SizedBox(height: 16),
-
                 const Text('Station address',
-                    style: TextStyle(color: Colors.white, fontSize: 14)),
+                    style: TextStyle(
+                        color: Colors.white, fontSize: 14)),
                 const SizedBox(height: 8),
-                _buildField(_addressController, 'e.g. Homagama, Colombo'),
+                _buildField(_addressController,
+                    'e.g. Homagama, Colombo'),
                 const SizedBox(height: 8),
-
-                // ✅ GPS notice for station owners
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -258,12 +269,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.location_on, color: Colors.amber, size: 18),
+                      Icon(Icons.location_on,
+                          color: Colors.amber, size: 18),
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Your current GPS location will be saved to help customers find your station.',
-                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                          style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12),
                         ),
                       ),
                     ],
@@ -271,59 +285,66 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
-
               const Text('Email',
-                  style: TextStyle(color: Colors.white, fontSize: 14)),
+                  style: TextStyle(
+                      color: Colors.white, fontSize: 14)),
               const SizedBox(height: 8),
-              _buildField(_emailController, 'Enter your email address',
+              _buildField(
+                  _emailController,
+                  'Enter your email address',
                   keyboardType: TextInputType.emailAddress),
               const SizedBox(height: 16),
-
               const Text('Password',
-                  style: TextStyle(color: Colors.white, fontSize: 14)),
+                  style: TextStyle(
+                      color: Colors.white, fontSize: 14)),
               const SizedBox(height: 8),
               _buildPasswordField(
                 _passwordController,
                 'Create new password',
                 _showPassword,
-                onToggle: () =>
-                    setState(() => _showPassword = !_showPassword),
+                onToggle: () => setState(
+                    () => _showPassword = !_showPassword),
               ),
               const SizedBox(height: 16),
-
               const Text('Confirm password',
-                  style: TextStyle(color: Colors.white, fontSize: 14)),
+                  style: TextStyle(
+                      color: Colors.white, fontSize: 14)),
               const SizedBox(height: 8),
               _buildPasswordField(
                 _confirmPasswordController,
                 'Confirm password',
                 _showConfirmPassword,
-                onToggle: () => setState(
-                    () => _showConfirmPassword = !_showConfirmPassword),
+                onToggle: () => setState(() =>
+                    _showConfirmPassword =
+                        !_showConfirmPassword),
               ),
               const SizedBox(height: 32),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _handleRegister,
+                  onPressed:
+                      _isLoading ? null : _handleRegister,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30)),
+                        borderRadius:
+                            BorderRadius.circular(30)),
                   ),
                   child: _isLoading
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child:
-                              CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2),
                         )
                       : const Text('Create account',
                           style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
+                              fontSize: 16,
+                              fontWeight:
+                                  FontWeight.bold)),
                 ),
               ),
             ],
@@ -333,7 +354,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildField(TextEditingController controller, String hint,
+  Widget _buildField(
+      TextEditingController controller, String hint,
       {TextInputType? keyboardType}) {
     return TextField(
       controller: controller,
@@ -341,20 +363,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
       style: const TextStyle(color: Colors.black),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.black54),
+        hintStyle:
+            const TextStyle(color: Colors.black54),
         filled: true,
         fillColor: Colors.grey[300],
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide.none),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16, vertical: 14),
       ),
     );
   }
 
   Widget _buildPasswordField(
-      TextEditingController controller, String hint, bool obscure,
+      TextEditingController controller,
+      String hint,
+      bool obscure,
       {required VoidCallback onToggle}) {
     return TextField(
       controller: controller,
@@ -362,17 +387,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       style: const TextStyle(color: Colors.black),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.black54),
+        hintStyle:
+            const TextStyle(color: Colors.black54),
         filled: true,
         fillColor: Colors.grey[300],
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide.none),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16, vertical: 14),
         suffixIcon: IconButton(
           icon: Icon(
-              obscure ? Icons.visibility_off : Icons.visibility,
+              obscure
+                  ? Icons.visibility_off
+                  : Icons.visibility,
               color: Colors.black54),
           onPressed: onToggle,
         ),

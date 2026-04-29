@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import '../../../services/user_provider.dart';
+import 'package:petromind/data/services/user_provider.dart';
 import '../../../data/repositories/alert_repository.dart';
 import 'stock_management_screen.dart';
 import 'sales_transactions_screen.dart';
@@ -11,6 +11,7 @@ import 'station_notifications_screen.dart';
 import 'station_profile_screen.dart';
 import 'customer_feedback_screen.dart';
 import 'admin_settings_screen.dart';
+import 'registration_report_screen.dart';
 import '../auth/auth_screen.dart';
 import '../prices/admin_price_screen.dart';
 
@@ -25,10 +26,18 @@ class StationDashboardScreen extends StatefulWidget {
 class _StationDashboardScreenState
     extends State<StationDashboardScreen> {
 
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(
+        const Duration(seconds: 2), _checkStockAlerts);
+  }
+
   Future<void> _checkStockAlerts() async {
     try {
       final provider = Provider.of<UserProvider>(
-          context, listen: false);
+          context,
+          listen: false);
       final stationName = provider.firstName.isNotEmpty
           ? provider.firstName
           : 'PetroMind Station';
@@ -45,7 +54,8 @@ class _StationDashboardScreenState
         final fuelType =
             data['fuelType'] as String? ?? doc.id;
         final stockLiters =
-            (data['stockLitres'] as num?)?.toDouble() ?? 0;
+            (data['stockLitres'] as num?)?.toDouble() ??
+                0;
         await AlertRepository.checkAndAlertStock(
           stationId: uid,
           stationName: stationName,
@@ -56,13 +66,6 @@ class _StationDashboardScreenState
     } catch (e) {
       print('_checkStockAlerts error: $e');
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(
-        const Duration(seconds: 2), _checkStockAlerts);
   }
 
   @override
@@ -105,17 +108,18 @@ class _StationDashboardScreenState
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: const Color(0xFF8B0000),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius:
+                      BorderRadius.circular(12),
                   border: Border.all(
-                      color:
-                          Colors.orange.withOpacity(0.5)),
+                      color: Colors.orange
+                          .withOpacity(0.5)),
                 ),
                 child: Row(children: [
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color:
-                          Colors.orange.withOpacity(0.2),
+                      color: Colors.orange
+                          .withOpacity(0.2),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -157,7 +161,7 @@ class _StationDashboardScreenState
                 'Prices updated today', '4 hrs ago'),
             const SizedBox(height: 16),
 
-            // ── STATS ROW — loads from Firestore ──
+            // ── STATS ROW ──
             StreamBuilder<DocumentSnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('stations')
@@ -192,7 +196,6 @@ class _StationDashboardScreenState
                                 0;
                       }
                     }
-
                     return Row(children: [
                       _statCard(
                         'LKR ${NumberFormat('#,##0').format(revenue)}',
@@ -220,6 +223,77 @@ class _StationDashboardScreenState
             ),
             const SizedBox(height: 16),
 
+            // ✅ Registration report banner
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) =>
+                        const RegistrationReportScreen()),
+              ),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      BorderRadius.circular(12),
+                  border: Border.all(
+                      color: const Color(0xFF8B0000)
+                          .withValues(alpha: 0.3)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black
+                          .withValues(alpha: 0.04),
+                      blurRadius: 6,
+                    )
+                  ],
+                ),
+                child: Row(children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B0000)
+                          .withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                        Icons.bar_chart,
+                        color: Color(0xFF8B0000),
+                        size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Customer Registration Report',
+                          style: TextStyle(
+                              fontWeight:
+                                  FontWeight.bold,
+                              fontSize: 13,
+                              color: Color(0xFF8B0000)),
+                        ),
+                        Text(
+                          'View monthly registration trends',
+                          style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                      Icons.arrow_forward_ios,
+                      color: Color(0xFF8B0000),
+                      size: 14),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // ── 7 DAY SALES ──
             Container(
               padding: const EdgeInsets.all(16),
@@ -235,7 +309,8 @@ class _StationDashboardScreenState
                     mainAxisAlignment:
                         MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('7 Day Sales Overview',
+                      const Text(
+                          '7 Day Sales Overview',
                           style: TextStyle(
                               color: Colors.white,
                               fontWeight:
@@ -248,7 +323,8 @@ class _StationDashboardScreenState
                                 const StockManagementScreen(),
                           ),
                         ),
-                        child: const Text('View Report >',
+                        child: const Text(
+                            'View Report >',
                             style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 12)),
@@ -311,7 +387,8 @@ class _StationDashboardScreenState
                     mainAxisAlignment:
                         MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Low Stock Alerts',
+                      const Text(
+                          'Low Stock Alerts',
                           style: TextStyle(
                               color: Colors.white,
                               fontWeight:
@@ -335,7 +412,8 @@ class _StationDashboardScreenState
                   const SizedBox(height: 8),
                   GestureDetector(
                     onTap: () async {
-                      await AlertRepository.publishAlert(
+                      await AlertRepository
+                          .publishAlert(
                         type: 'low_stock',
                         title: '⚠️ Low Stock Alert',
                         message:
@@ -352,17 +430,22 @@ class _StationDashboardScreenState
                             .showSnackBar(const SnackBar(
                           content: Text(
                               '⚠️ Low stock alert sent!'),
-                          backgroundColor: Colors.orange,
-                          duration: Duration(seconds: 2),
+                          backgroundColor:
+                              Colors.orange,
+                          duration:
+                              Duration(seconds: 2),
                         ));
                       }
                     },
-                    child: _stockAlertRow('Petrol 92',
-                        '120L remaining', Colors.red),
+                    child: _stockAlertRow(
+                        'Petrol 92',
+                        '120L remaining',
+                        Colors.red),
                   ),
                   GestureDetector(
                     onTap: () async {
-                      await AlertRepository.publishAlert(
+                      await AlertRepository
+                          .publishAlert(
                         type: 'peak_hour',
                         title:
                             '🕐 Peak Hour at $stationName',
@@ -378,12 +461,13 @@ class _StationDashboardScreenState
                           content: Text(
                               '🕐 Peak hour alert sent!'),
                           backgroundColor: Colors.blue,
-                          duration: Duration(seconds: 2),
+                          duration:
+                              Duration(seconds: 2),
                         ));
                       }
                     },
-                    child: _stockAlertRow(
-                        'Air Pump', 'Busy', Colors.orange),
+                    child: _stockAlertRow('Air Pump',
+                        'Busy', Colors.orange),
                   ),
                 ],
               ),
@@ -395,7 +479,8 @@ class _StationDashboardScreenState
               Expanded(
                 child: GestureDetector(
                   onTap: () async {
-                    await AlertRepository.alertMaintenance(
+                    await AlertRepository
+                        .alertMaintenance(
                       stationId: uid,
                       stationName: stationName,
                       isClosed: true,
@@ -414,8 +499,8 @@ class _StationDashboardScreenState
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color:
-                          Colors.purple.withOpacity(0.15),
+                      color: Colors.purple
+                          .withOpacity(0.15),
                       borderRadius:
                           BorderRadius.circular(10),
                       border: Border.all(
@@ -445,7 +530,8 @@ class _StationDashboardScreenState
               Expanded(
                 child: GestureDetector(
                   onTap: () async {
-                    await AlertRepository.alertMaintenance(
+                    await AlertRepository
+                        .alertMaintenance(
                       stationId: uid,
                       stationName: stationName,
                       isClosed: false,
@@ -453,8 +539,8 @@ class _StationDashboardScreenState
                     if (context.mounted) {
                       ScaffoldMessenger.of(context)
                           .showSnackBar(const SnackBar(
-                        content:
-                            Text('✅ Reopen alert sent!'),
+                        content: Text(
+                            '✅ Reopen alert sent!'),
                         backgroundColor: Colors.green,
                         duration: Duration(seconds: 2),
                       ));
@@ -463,8 +549,8 @@ class _StationDashboardScreenState
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color:
-                          Colors.green.withOpacity(0.15),
+                      color: Colors.green
+                          .withOpacity(0.15),
                       borderRadius:
                           BorderRadius.circular(10),
                       border: Border.all(
@@ -525,7 +611,8 @@ class _StationDashboardScreenState
                   _activityRow(
                       'Air Pump Down', '3 hrs ago'),
                   _activityRow(
-                      'Low Stock Diesel Oil', '4 hrs ago'),
+                      'Low Stock Diesel Oil',
+                      '4 hrs ago'),
                 ],
               ),
             ),
@@ -543,7 +630,8 @@ class _StationDashboardScreenState
         '${now.year}';
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
+  PreferredSizeWidget _buildAppBar(
+      BuildContext context) {
     return AppBar(
       backgroundColor: const Color(0xFF8B0000),
       elevation: 0,
@@ -603,8 +691,8 @@ class _StationDashboardScreenState
       backgroundColor: const Color(0xFF8B0000),
       child: SafeArea(
         child: ListView(
-          padding:
-              const EdgeInsets.symmetric(vertical: 20),
+          padding: const EdgeInsets.symmetric(
+              vertical: 20),
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
@@ -624,76 +712,68 @@ class _StationDashboardScreenState
             _drawerItem(context, Icons.dashboard,
                 'Dashboard',
                 () => Navigator.pop(context)),
-            _drawerItem(
-                context,
-                Icons.price_change,
+            _drawerItem(context, Icons.price_change,
                 'Update Fuel Prices', () {
               Navigator.pop(context);
               Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        const AdminPriceScreen()),
-              );
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          const AdminPriceScreen()));
             }),
-            _drawerItem(
-                context,
-                Icons.inventory,
+            _drawerItem(context, Icons.inventory,
                 'Stock Management', () {
               Navigator.pop(context);
               Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        const StockManagementScreen()),
-              );
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          const StockManagementScreen()));
             }),
-            _drawerItem(
-                context,
-                Icons.receipt_long,
+            _drawerItem(context, Icons.receipt_long,
                 'Sales & Transactions', () {
               Navigator.pop(context);
               Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        const SalesTransactionsScreen()),
-              );
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          const SalesTransactionsScreen()));
             }),
-            _drawerItem(
-                context,
-                Icons.notifications,
+            _drawerItem(context, Icons.bar_chart,
+                'Registration Report', () {
+              Navigator.pop(context);
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          const RegistrationReportScreen()));
+            }),
+            _drawerItem(context, Icons.notifications,
                 'Notifications', () {
               Navigator.pop(context);
               Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        const StationNotificationsScreen()),
-              );
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          const StationNotificationsScreen()));
             }),
-            _drawerItem(
-                context, Icons.store, 'Station Profile',
-                () {
+            _drawerItem(context, Icons.store,
+                'Station Profile', () {
               Navigator.pop(context);
               Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        const StationProfileScreen()),
-              );
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          const StationProfileScreen()));
             }),
-            _drawerItem(
-                context,
-                Icons.feedback,
+            _drawerItem(context, Icons.feedback,
                 'Customer Feedback', () {
               Navigator.pop(context);
               Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        const CustomerFeedbackScreen()),
-              );
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          const CustomerFeedbackScreen()));
             }),
             _drawerItem(
                 context,
@@ -701,16 +781,13 @@ class _StationDashboardScreenState
                 'Admin Settings', () {
               Navigator.pop(context);
               Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        const AdminSettingsScreen()),
-              );
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          const AdminSettingsScreen()));
             }),
             const Divider(color: Colors.white24),
-            _drawerItem(
-                context,
-                Icons.logout,
+            _drawerItem(context, Icons.logout,
                 'Log Out',
                 () => Navigator.pushAndRemoveUntil(
                       context,
@@ -725,10 +802,12 @@ class _StationDashboardScreenState
     );
   }
 
-  Widget _drawerItem(BuildContext context, IconData icon,
-      String title, VoidCallback onTap) {
+  Widget _drawerItem(BuildContext context,
+      IconData icon, String title,
+      VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: Colors.white, size: 22),
+      leading:
+          Icon(icon, color: Colors.white, size: 22),
       title: Text(title,
           style: const TextStyle(
               color: Colors.white, fontSize: 15)),

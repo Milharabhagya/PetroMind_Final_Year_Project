@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:petromind/services/user_provider.dart';
+import 'package:petromind/data/services/user_provider.dart'; // ✅ FIXED
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -114,21 +114,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 8),
             const Text('Set New Photo',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+                style:
+                    TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 24),
-            _editableField(_firstNameController, 'First name'),
+            _editableField(
+                _firstNameController, 'First name'),
             const SizedBox(height: 8),
             _editableField(_lastNameController, 'Last name'),
             const Text(
                 'Enter your name and an optional profile photo',
-                style:
-                    TextStyle(color: Colors.grey, fontSize: 12)),
+                style: TextStyle(
+                    color: Colors.grey, fontSize: 12)),
             const SizedBox(height: 16),
             _editableField(_emailController, 'Email',
                 keyboardType: TextInputType.emailAddress),
             const Text('Enter your Email address',
-                style:
-                    TextStyle(color: Colors.grey, fontSize: 12)),
+                style: TextStyle(
+                    color: Colors.grey, fontSize: 12)),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
@@ -136,21 +138,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onPressed: _isLoading ? null : _handleSave,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8B0000),
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 16),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30)),
+                      borderRadius:
+                          BorderRadius.circular(30)),
                 ),
                 child: _isLoading
                     ? const SizedBox(
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2),
+                            color: Colors.white,
+                            strokeWidth: 2),
                       )
                     : const Text('Save edits',
                         style: TextStyle(
-                            color: Colors.white, fontSize: 16)),
+                            color: Colors.white,
+                            fontSize: 16)),
               ),
             ),
           ],
