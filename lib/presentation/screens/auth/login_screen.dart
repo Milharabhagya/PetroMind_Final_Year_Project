@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../home/home_screen.dart';
 import '../station/station_dashboard_screen.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 import '../../../services/auth_service.dart';
-import '../../../data/services/user_provider.dart'; // ✅ FIXED
+import '../../../data/services/user_provider.dart';
 import '../../../services/auto_crowd_service.dart';
 
 class LoginScreen extends StatefulWidget {
+  // isStation = true only when coming from the hidden
+  // "Station owner? Sign in here" link
   final bool isStation;
   const LoginScreen({super.key, this.isStation = false});
 
@@ -35,13 +39,15 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
+    // ── Validation ──
     if (email.isEmpty && password.isEmpty) {
       setState(() =>
           _errorMessage = 'Please enter your email and password.');
       return;
     }
     if (email.isEmpty) {
-      setState(() => _errorMessage = 'Please enter your email.');
+      setState(
+          () => _errorMessage = 'Please enter your email.');
       return;
     }
     if (password.isEmpty) {
@@ -50,8 +56,8 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     if (!email.contains('@')) {
-      setState(() =>
-          _errorMessage = 'Please enter a valid email address.');
+      setState(() => _errorMessage =
+          'Please enter a valid email address.');
       return;
     }
     if (password.length < 6) {
@@ -65,23 +71,15 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
 
-    final result = widget.isStation
-        ? await AuthService.loginStation(
-            email: email, password: password)
-        : await AuthService.loginCustomer(
-            email: email, password: password);
-
-    // ✅ Check mounted after every await
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    if (result['success']) {
-      // ✅ context is safe here — MultiProvider.builder
-      // guarantees providers are always accessible
-      final provider =
-          Provider.of<UserProvider>(context, listen: false);
-
-      if (widget.isStation) {
+    // ── If station owner link used, go direct ──
+    if (widget.isStation) {
+      final result = await AuthService.loginStation(
+          email: email, password: password);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      if (result['success']) {
+        final provider =
+            Provider.of<UserProvider>(context, listen: false);
         await provider.loadStationData();
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(
@@ -91,17 +89,134 @@ class _LoginScreenState extends State<LoginScreen> {
                     const StationDashboardScreen()),
             (route) => false);
       } else {
-        await provider.loadUserData();
-        if (!mounted) return;
-        AutoCrowdService.autoLogCrowdOnLogin();
+        setState(() => _errorMessage = result['error']);
+      }
+      return;
+    }
+
+    // ── Auto role detection for normal login ──
+    try {
+      // Step 1: Firebase Auth sign in
+      final credential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+              email: email, password: password);
+      if (!mounted) return;
+
+      final uid = credential.user?.uid ?? '';
+      if (uid.isEmpty) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Login failed. Please try again.';
+        });
+        return;
+      }
+
+      final db = FirebaseFirestore.instance;
+
+      // Step 2: Check users collection (customer)
+      final userDoc =
+          await db.collection('users').doc(uid).get();
+      if (!mounted) return;
+
+      if (userDoc.exists) {
+        final role =
+            userDoc.data()?['role'] as String? ?? '';
+        if (role == 'customer' || role.isEmpty) {
+          final provider = Provider.of<UserProvider>(
+              context,
+              listen: false);
+          await provider.loadUserData();
+          if (!mounted) return;
+          AutoCrowdService.autoLogCrowdOnLogin();
+          Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const HomeScreen()),
+              (route) => false);
+          return;
+        }
+      }
+
+      // Step 3: Check stations collection (station owner)
+      final stationDoc =
+          await db.collection('stations').doc(uid).get();
+      if (!mounted) return;
+
+      if (stationDoc.exists) {
+        final role =
+            stationDoc.data()?['role'] as String? ?? '';
+        if (role == 'station' || role.isEmpty) {
+          final provider = Provider.of<UserProvider>(
+              context,
+              listen: false);
+          await provider.loadStationData();
+          if (!mounted) return;
+          Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                  builder: (_) =>
+                      const StationDashboardScreen()),
+              (route) => false);
+          return;
+        }
+      }
+
+      // Step 4: Check admin collection
+      final adminDoc =
+          await db.collection('admins').doc(uid).get();
+      if (!mounted) return;
+
+      if (adminDoc.exists) {
+        // Navigate to admin dashboard if you have one
+        // For now redirect to station dashboard
         Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-                builder: (_) => const HomeScreen()),
+                builder: (_) =>
+                    const StationDashboardScreen()),
             (route) => false);
+        return;
       }
-    } else {
-      setState(() => _errorMessage = result['error']);
+
+      // Step 5: No role found
+      await FirebaseAuth.instance.signOut();
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage =
+            'Account not found. Please register first.';
+      });
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = _friendlyError(e.code);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Something went wrong. Try again.';
+      });
+    }
+  }
+
+  String _friendlyError(String code) {
+    switch (code) {
+      case 'user-not-found':
+        return 'No account found with this email.';
+      case 'wrong-password':
+        return 'Incorrect password. Please try again.';
+      case 'invalid-credential':
+        return 'Invalid email or password.';
+      case 'user-disabled':
+        return 'This account has been disabled.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please try later.';
+      case 'network-request-failed':
+        return 'No internet connection.';
+      default:
+        return 'Login failed. Please try again.';
     }
   }
 
@@ -126,8 +241,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white
-                            .withOpacity(0.15),
+                        color:
+                            Colors.white.withOpacity(0.15),
                         borderRadius:
                             BorderRadius.circular(10),
                       ),
@@ -137,23 +252,23 @@ class _LoginScreenState extends State<LoginScreen> {
                           size: 16),
                     ),
                   ),
-                  Image.asset('assets/images/logo.png',
-                      height: 38,
-                      errorBuilder: (c, e, s) =>
-                          Row(children: const [
-                            Icon(Icons.local_gas_station,
-                                color: Colors.amber,
-                                size: 28),
-                            SizedBox(width: 6),
-                            Text('PetroMind',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight:
-                                        FontWeight.bold,
-                                    fontStyle:
-                                        FontStyle.italic,
-                                    fontSize: 18)),
-                          ])),
+                  Image.asset(
+                    'assets/images/logo.png',
+                    height: 38,
+                    errorBuilder: (c, e, s) => Row(
+                      children: const [
+                        Icon(Icons.local_gas_station,
+                            color: Colors.amber, size: 28),
+                        SizedBox(width: 6),
+                        Text('PetroMind',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontStyle: FontStyle.italic,
+                                fontSize: 18)),
+                      ],
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 36),
@@ -161,12 +276,20 @@ class _LoginScreenState extends State<LoginScreen> {
               // ── TITLE ──
               Text(
                 widget.isStation
-                    ? 'Owner Log in'
-                    : 'Customer Log in',
+                    ? 'Station Owner Login'
+                    : 'Welcome back',
                 style: const TextStyle(
                     color: Colors.white,
                     fontSize: 26,
                     fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                widget.isStation
+                    ? 'Sign in to manage your station'
+                    : 'Sign in to your account',
+                style: const TextStyle(
+                    color: Colors.white60, fontSize: 13),
               ),
               const SizedBox(height: 28),
 
@@ -265,8 +388,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius:
                           BorderRadius.circular(8),
                       border: Border.all(
-                          color: Colors.red
-                              .withOpacity(0.5))),
+                          color:
+                              Colors.red.withOpacity(0.5))),
                   child: Row(children: [
                     const Icon(Icons.error_outline,
                         color: Colors.white, size: 16),

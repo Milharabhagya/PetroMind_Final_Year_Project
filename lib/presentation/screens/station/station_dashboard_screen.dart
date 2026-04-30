@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:petromind/data/services/user_provider.dart';
 import '../../../data/repositories/alert_repository.dart';
+import '../../../data/services/notification_service.dart';
 import 'stock_management_screen.dart';
 import 'sales_transactions_screen.dart';
 import 'station_notifications_screen.dart';
@@ -26,18 +27,36 @@ class StationDashboardScreen extends StatefulWidget {
 class _StationDashboardScreenState
     extends State<StationDashboardScreen> {
 
+  // ── Price change listener cancel function ──
+  Function()? _cancelPriceListener;
+
   @override
   void initState() {
     super.initState();
     Future.delayed(
         const Duration(seconds: 2), _checkStockAlerts);
+
+    // ── Start listening to government fuel price changes ──
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isNotEmpty) {
+      _cancelPriceListener =
+          NotificationService.listenToGlobalPriceChanges(
+        stationId: uid,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    // ── Cancel listener when dashboard is disposed ──
+    _cancelPriceListener?.call();
+    super.dispose();
   }
 
   Future<void> _checkStockAlerts() async {
     try {
-      final provider = Provider.of<UserProvider>(
-          context,
-          listen: false);
+      final provider =
+          Provider.of<UserProvider>(context, listen: false);
       final stationName = provider.firstName.isNotEmpty
           ? provider.firstName
           : 'PetroMind Station';
@@ -54,8 +73,7 @@ class _StationDashboardScreenState
         final fuelType =
             data['fuelType'] as String? ?? doc.id;
         final stockLiters =
-            (data['stockLitres'] as num?)?.toDouble() ??
-                0;
+            (data['stockLitres'] as num?)?.toDouble() ?? 0;
         await AlertRepository.checkAndAlertStock(
           stationId: uid,
           stationName: stationName,
@@ -64,7 +82,7 @@ class _StationDashboardScreenState
         );
       }
     } catch (e) {
-      print('_checkStockAlerts error: $e');
+      debugPrint('_checkStockAlerts error: $e');
     }
   }
 
@@ -79,7 +97,7 @@ class _StationDashboardScreenState
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F0EB),
-      appBar: _buildAppBar(context),
+      appBar: _buildAppBar(context, uid),
       drawer: _buildDrawer(context),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -111,15 +129,15 @@ class _StationDashboardScreenState
                   borderRadius:
                       BorderRadius.circular(12),
                   border: Border.all(
-                      color: Colors.orange
-                          .withOpacity(0.5)),
+                      color:
+                          Colors.orange.withOpacity(0.5)),
                 ),
                 child: Row(children: [
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.orange
-                          .withOpacity(0.2),
+                      color:
+                          Colors.orange.withOpacity(0.2),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -223,7 +241,7 @@ class _StationDashboardScreenState
             ),
             const SizedBox(height: 16),
 
-            // ✅ Registration report banner
+            // ── REGISTRATION REPORT BANNER ──
             GestureDetector(
               onTap: () => Navigator.push(
                 context,
@@ -257,8 +275,7 @@ class _StationDashboardScreenState
                           .withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                        Icons.bar_chart,
+                    child: const Icon(Icons.bar_chart,
                         color: Color(0xFF8B0000),
                         size: 22),
                   ),
@@ -285,8 +302,7 @@ class _StationDashboardScreenState
                       ],
                     ),
                   ),
-                  const Icon(
-                      Icons.arrow_forward_ios,
+                  const Icon(Icons.arrow_forward_ios,
                       color: Color(0xFF8B0000),
                       size: 14),
                 ]),
@@ -309,8 +325,7 @@ class _StationDashboardScreenState
                     mainAxisAlignment:
                         MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                          '7 Day Sales Overview',
+                      const Text('7 Day Sales Overview',
                           style: TextStyle(
                               color: Colors.white,
                               fontWeight:
@@ -387,8 +402,7 @@ class _StationDashboardScreenState
                     mainAxisAlignment:
                         MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                          'Low Stock Alerts',
+                      const Text('Low Stock Alerts',
                           style: TextStyle(
                               color: Colors.white,
                               fontWeight:
@@ -412,8 +426,7 @@ class _StationDashboardScreenState
                   const SizedBox(height: 8),
                   GestureDetector(
                     onTap: () async {
-                      await AlertRepository
-                          .publishAlert(
+                      await AlertRepository.publishAlert(
                         type: 'low_stock',
                         title: '⚠️ Low Stock Alert',
                         message:
@@ -430,22 +443,17 @@ class _StationDashboardScreenState
                             .showSnackBar(const SnackBar(
                           content: Text(
                               '⚠️ Low stock alert sent!'),
-                          backgroundColor:
-                              Colors.orange,
-                          duration:
-                              Duration(seconds: 2),
+                          backgroundColor: Colors.orange,
+                          duration: Duration(seconds: 2),
                         ));
                       }
                     },
-                    child: _stockAlertRow(
-                        'Petrol 92',
-                        '120L remaining',
-                        Colors.red),
+                    child: _stockAlertRow('Petrol 92',
+                        '120L remaining', Colors.red),
                   ),
                   GestureDetector(
                     onTap: () async {
-                      await AlertRepository
-                          .publishAlert(
+                      await AlertRepository.publishAlert(
                         type: 'peak_hour',
                         title:
                             '🕐 Peak Hour at $stationName',
@@ -461,13 +469,12 @@ class _StationDashboardScreenState
                           content: Text(
                               '🕐 Peak hour alert sent!'),
                           backgroundColor: Colors.blue,
-                          duration:
-                              Duration(seconds: 2),
+                          duration: Duration(seconds: 2),
                         ));
                       }
                     },
-                    child: _stockAlertRow('Air Pump',
-                        'Busy', Colors.orange),
+                    child: _stockAlertRow(
+                        'Air Pump', 'Busy', Colors.orange),
                   ),
                 ],
               ),
@@ -499,8 +506,8 @@ class _StationDashboardScreenState
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.purple
-                          .withOpacity(0.15),
+                      color:
+                          Colors.purple.withOpacity(0.15),
                       borderRadius:
                           BorderRadius.circular(10),
                       border: Border.all(
@@ -539,8 +546,8 @@ class _StationDashboardScreenState
                     if (context.mounted) {
                       ScaffoldMessenger.of(context)
                           .showSnackBar(const SnackBar(
-                        content: Text(
-                            '✅ Reopen alert sent!'),
+                        content:
+                            Text('✅ Reopen alert sent!'),
                         backgroundColor: Colors.green,
                         duration: Duration(seconds: 2),
                       ));
@@ -549,8 +556,8 @@ class _StationDashboardScreenState
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.green
-                          .withOpacity(0.15),
+                      color:
+                          Colors.green.withOpacity(0.15),
                       borderRadius:
                           BorderRadius.circular(10),
                       border: Border.all(
@@ -579,48 +586,98 @@ class _StationDashboardScreenState
             ]),
             const SizedBox(height: 16),
 
-            // ── RECENT ACTIVITY ──
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF8B0000),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
+            // ── RECENT ACTIVITY (live from notifications) ──
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('stations')
+                  .doc(uid)
+                  .collection('notifications')
+                  .orderBy('timestamp', descending: true)
+                  .limit(3)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                final docs = snapshot.data?.docs ?? [];
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B0000),
+                    borderRadius:
+                        BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
                     children: [
-                      Text('Recent Activity',
+                      Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment
+                                .spaceBetween,
+                        children: [
+                          const Text('Recent Activity',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight:
+                                      FontWeight.bold)),
+                          GestureDetector(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const StationNotificationsScreen(),
+                              ),
+                            ),
+                            child: const Text(
+                                'See All >',
+                                style: TextStyle(
+                                    color:
+                                        Colors.white70,
+                                    fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (docs.isEmpty)
+                        const Text(
+                          'No recent activity yet',
                           style: TextStyle(
-                              color: Colors.white,
-                              fontWeight:
-                                  FontWeight.bold)),
-                      Text("Today's Top Alerts",
-                          style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12)),
+                              color: Colors.white54,
+                              fontSize: 12),
+                        )
+                      else
+                        ...docs.map((doc) {
+                          final data = doc.data()
+                              as Map<String, dynamic>;
+                          final msg =
+                              data['message'] as String? ??
+                                  '';
+                          final ts = data['timestamp']
+                              as Timestamp?;
+                          final timeStr = ts != null
+                              ? _formatTime(
+                                  ts.toDate())
+                              : '';
+                          return _activityRow(
+                              msg, timeStr);
+                        }),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  _activityRow(
-                      'Air Pump Notified', '2 hrs ago'),
-                  _activityRow(
-                      'Air Pump Down', '3 hrs ago'),
-                  _activityRow(
-                      'Low Stock Diesel Oil',
-                      '4 hrs ago'),
-                ],
-              ),
+                );
+              },
             ),
             const SizedBox(height: 20),
           ],
         ),
       ),
     );
+  }
+
+  String _formatTime(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${dt.day}/${dt.month}/${dt.year}';
   }
 
   String _getTodayDate() {
@@ -631,7 +688,7 @@ class _StationDashboardScreenState
   }
 
   PreferredSizeWidget _buildAppBar(
-      BuildContext context) {
+      BuildContext context, String uid) {
     return AppBar(
       backgroundColor: const Color(0xFF8B0000),
       elevation: 0,
@@ -654,16 +711,53 @@ class _StationDashboardScreenState
         ),
       ),
       actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications,
-              color: Colors.white),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  const StationNotificationsScreen(),
-            ),
-          ),
+        // ── Notification bell with unread badge ──
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('stations')
+              .doc(uid)
+              .collection('notifications')
+              .where('read', isEqualTo: false)
+              .snapshots(),
+          builder: (context, snapshot) {
+            final unread =
+                snapshot.data?.docs.length ?? 0;
+            return Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications,
+                      color: Colors.white),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const StationNotificationsScreen(),
+                    ),
+                  ),
+                ),
+                if (unread > 0)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        color: Colors.orangeAccent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        unread > 9 ? '9+' : '$unread',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight:
+                                FontWeight.bold),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
         GestureDetector(
           onTap: () => Navigator.push(
@@ -691,8 +785,8 @@ class _StationDashboardScreenState
       backgroundColor: const Color(0xFF8B0000),
       child: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.symmetric(
-              vertical: 20),
+          padding:
+              const EdgeInsets.symmetric(vertical: 20),
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
@@ -787,8 +881,7 @@ class _StationDashboardScreenState
                           const AdminSettingsScreen()));
             }),
             const Divider(color: Colors.white24),
-            _drawerItem(context, Icons.logout,
-                'Log Out',
+            _drawerItem(context, Icons.logout, 'Log Out',
                 () => Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
@@ -802,9 +895,8 @@ class _StationDashboardScreenState
     );
   }
 
-  Widget _drawerItem(BuildContext context,
-      IconData icon, String title,
-      VoidCallback onTap) {
+  Widget _drawerItem(BuildContext context, IconData icon,
+      String title, VoidCallback onTap) {
     return ListTile(
       leading:
           Icon(icon, color: Colors.white, size: 22),
@@ -916,9 +1008,13 @@ class _StationDashboardScreenState
             color: Colors.amber, size: 8),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(title,
-              style: const TextStyle(
-                  color: Colors.white, fontSize: 13)),
+          child: Text(
+            title,
+            style: const TextStyle(
+                color: Colors.white, fontSize: 12),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         Text(time,
             style: const TextStyle(

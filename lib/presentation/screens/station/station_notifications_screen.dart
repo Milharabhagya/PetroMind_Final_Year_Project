@@ -15,7 +15,6 @@ class _StationNotificationsScreenState
   final _db = FirebaseFirestore.instance;
   String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  // Notification type config: icon, color, label
   _NotifStyle _styleFor(String type) {
     switch (type) {
       case 'price_change':
@@ -92,6 +91,16 @@ class _StationNotificationsScreenState
         .update({'read': true});
   }
 
+  Future<void> _deleteNotification(String docId) async {
+    if (_uid.isEmpty) return;
+    await _db
+        .collection('stations')
+        .doc(_uid)
+        .collection('notifications')
+        .doc(docId)
+        .delete();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -142,7 +151,8 @@ class _StationNotificationsScreenState
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
+                    child:
+                        CircularProgressIndicator(color: Colors.white),
                   );
                 }
 
@@ -153,7 +163,7 @@ class _StationNotificationsScreenState
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.notifications_off_rounded,
+                        const Icon(Icons.notifications_off_rounded,
                             color: Colors.white24, size: 48),
                         const SizedBox(height: 12),
                         const Text(
@@ -166,109 +176,180 @@ class _StationNotificationsScreenState
                   );
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final doc = docs[index];
-                    final data = doc.data() as Map<String, dynamic>;
-                    final type = data['type'] as String? ?? 'general';
-                    final msg = data['message'] as String? ?? '';
-                    final isRead = data['read'] as bool? ?? false;
-                    final ts = data['timestamp'] as Timestamp?;
-                    final timeStr =
-                        ts != null ? _formatTime(ts.toDate()) : '';
-                    final style = _styleFor(type);
+                // Count unread
+                final unreadCount =
+                    docs.where((d) => (d.data() as Map)['read'] == false).length;
 
-                    return GestureDetector(
-                      onTap: () {
-                        if (!isRead) _markRead(doc.id);
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: isRead
-                              ? const Color(0xFF5A0000)
-                              : const Color(0xFF6B0000),
-                          borderRadius: BorderRadius.circular(10),
-                          border: isRead
-                              ? null
-                              : Border.all(
-                                  color: style.color.withOpacity(0.4),
-                                  width: 1),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                // Type badge
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        style.color.withOpacity(0.2),
-                                    borderRadius:
-                                        BorderRadius.circular(4),
-                                    border: Border.all(
-                                        color: style.color
-                                            .withOpacity(0.6),
-                                        width: 1),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(style.icon,
-                                          color: style.color, size: 10),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        style.label,
-                                        style: TextStyle(
-                                            color: style.color,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
+                return Column(
+                  children: [
+                    if (unreadCount > 0)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.orangeAccent,
+                                  shape: BoxShape.circle,
                                 ),
-                                const Spacer(),
-                                // Unread dot
-                                if (!isRead)
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    margin: const EdgeInsets.only(right: 8),
-                                    decoration: BoxDecoration(
-                                      color: style.color,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                Text(
-                                  timeStr,
-                                  style: const TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 10),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              msg,
-                              style: TextStyle(
-                                color: isRead
-                                    ? Colors.white60
-                                    : Colors.white,
-                                fontSize: 13,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              Text(
+                                '$unreadCount unread notification${unreadCount > 1 ? 's' : ''}',
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 12),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    );
-                  },
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: docs.length,
+                        itemBuilder: (context, index) {
+                          final doc = docs[index];
+                          final data =
+                              doc.data() as Map<String, dynamic>;
+                          final type =
+                              data['type'] as String? ?? 'general';
+                          final msg = data['message'] as String? ?? '';
+                          final isRead = data['read'] as bool? ?? false;
+                          final ts = data['timestamp'] as Timestamp?;
+                          final timeStr = ts != null
+                              ? _formatTime(ts.toDate())
+                              : '';
+                          final style = _styleFor(type);
+
+                          return Dismissible(
+                            key: Key(doc.id),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.red[900],
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              alignment: Alignment.centerRight,
+                              padding:
+                                  const EdgeInsets.only(right: 20),
+                              child: const Icon(Icons.delete_outline,
+                                  color: Colors.white),
+                            ),
+                            onDismissed: (_) =>
+                                _deleteNotification(doc.id),
+                            child: GestureDetector(
+                              onTap: () {
+                                if (!isRead) _markRead(doc.id);
+                              },
+                              child: AnimatedContainer(
+                                duration:
+                                    const Duration(milliseconds: 300),
+                                margin:
+                                    const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: isRead
+                                      ? const Color(0xFF5A0000)
+                                      : const Color(0xFF6B0000),
+                                  borderRadius:
+                                      BorderRadius.circular(10),
+                                  border: isRead
+                                      ? null
+                                      : Border.all(
+                                          color: style.color
+                                              .withOpacity(0.4),
+                                          width: 1),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding:
+                                              const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: style.color
+                                                .withOpacity(0.2),
+                                            borderRadius:
+                                                BorderRadius.circular(
+                                                    4),
+                                            border: Border.all(
+                                                color: style.color
+                                                    .withOpacity(0.6),
+                                                width: 1),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize:
+                                                MainAxisSize.min,
+                                            children: [
+                                              Icon(style.icon,
+                                                  color: style.color,
+                                                  size: 10),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                style.label,
+                                                style: TextStyle(
+                                                    color: style.color,
+                                                    fontSize: 10,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        if (!isRead)
+                                          Container(
+                                            width: 8,
+                                            height: 8,
+                                            margin: const EdgeInsets
+                                                .only(right: 8),
+                                            decoration: BoxDecoration(
+                                              color: style.color,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                        Text(
+                                          timeStr,
+                                          style: const TextStyle(
+                                              color: Colors.white54,
+                                              fontSize: 10),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      msg,
+                                      style: TextStyle(
+                                        color: isRead
+                                            ? Colors.white60
+                                            : Colors.white,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 );
               },
             ),

@@ -1,22 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// NotificationService
-/// -------------------
-/// Writes real-time notifications to each station's
-/// `stations/{uid}/notifications` subcollection.
-///
-/// Call these methods from wherever the relevant event occurs:
-///   - Stock update  → NotificationService.onStockUpdated(...)
-///   - Low stock     → (auto-called inside onStockUpdated)
-///   - New review    → NotificationService.onNewReview(...)
-///   - Price change  → NotificationService.onFuelPriceChanged(...)
-///
-/// The StationNotificationsScreen streams this collection live.
-
 class NotificationService {
   static final _db = FirebaseFirestore.instance;
 
-  // ─── Core writer ───────────────────────────────────────────────
   static Future<void> _write({
     required String stationId,
     required String type,
@@ -35,14 +21,12 @@ class NotificationService {
     });
   }
 
-  // ─── 1. Stock updated (inflow / outflow / edit) ────────────────
-  /// Call this after any stock change in stock_management_screen.dart
   static Future<void> onStockUpdated({
     required String stationId,
     required String fuelType,
-    required String changeType, // 'inflow', 'outflow', 'edit'
+    required String changeType,
     required double amount,
-    double? currentStock,       // pass new stock level to auto-check low stock
+    double? currentStock,
   }) async {
     String msg;
     if (changeType == 'inflow') {
@@ -53,24 +37,18 @@ class NotificationService {
       msg = '✏️ $fuelType stock manually set to ${amount.toStringAsFixed(0)}L';
     }
 
-    await _write(
-      stationId: stationId,
-      type: 'stock_update',
-      message: msg,
-    );
+    await _write(stationId: stationId, type: 'stock_update', message: msg);
 
-    // Auto low-stock alert
     if (currentStock != null && currentStock > 0 && currentStock < 200) {
       await _write(
         stationId: stationId,
         type: 'low_stock',
-        message: '⚠️ Low Stock Alert: $fuelType — only ${currentStock.toStringAsFixed(0)}L remaining',
+        message:
+            '⚠️ Low Stock Alert: $fuelType — only ${currentStock.toStringAsFixed(0)}L remaining',
       );
     }
   }
 
-  // ─── 2. New customer review ─────────────────────────────────────
-  /// Call this when a review is submitted for this station
   static Future<void> onNewReview({
     required String stationId,
     required double rating,
@@ -86,9 +64,6 @@ class NotificationService {
     );
   }
 
-  // ─── 3. Fuel price changed (call from admin/price update) ───────
-  /// Call this when a fuel price is updated in fuel_prices_ceypetco
-  /// You can trigger this from your admin price screen or a Cloud Function
   static Future<void> onFuelPriceChanged({
     required String stationId,
     required String fuelType,
@@ -105,9 +80,6 @@ class NotificationService {
     );
   }
 
-  // ─── 4. General fuel news ───────────────────────────────────────
-  /// Broadcast a news/announcement to all stations
-  /// Call from an admin panel or Cloud Function
   static Future<void> broadcastFuelNews({
     required List<String> stationIds,
     required String message,
@@ -129,32 +101,25 @@ class NotificationService {
     await batch.commit();
   }
 
-  // ─── 5. Listen to global price changes & auto-notify ───────────
-  /// Call this once at app startup (e.g. in main.dart or station dashboard)
-  /// It watches fuel_prices_ceypetco and writes a notification when any
-  /// price document changes.
-  ///
-  /// Pass [stationId] of the currently logged-in station.
-  /// Returns a cancel function — call it when the station logs out.
   static Function() listenToGlobalPriceChanges({
     required String stationId,
   }) {
+    bool isFirstSnapshot = true;
     final sub = FirebaseFirestore.instance
         .collection('fuel_prices_ceypetco')
         .snapshots()
         .listen((snapshot) {
+      if (isFirstSnapshot) {
+        isFirstSnapshot = false;
+        return; // skip initial load
+      }
       for (final change in snapshot.docChanges) {
-        // Only react to modifications (not initial load)
         if (change.type == DocumentChangeType.modified) {
           final data = change.doc.data();
           if (data == null) continue;
-
-          final fuelName = data['name'] as String? ??
-              change.doc.id.replaceAll('_', ' ');
-          final newPrice =
-              (data['price'] as num?)?.toDouble() ?? 0;
-
-          // We don't have oldPrice here — just notify price changed
+          final fuelName =
+              data['name'] as String? ?? change.doc.id.replaceAll('_', ' ');
+          final newPrice = (data['price'] as num?)?.toDouble() ?? 0;
           _write(
             stationId: stationId,
             type: 'price_change',
@@ -164,8 +129,6 @@ class NotificationService {
         }
       }
     });
-
-    // Return cancel function
     return () => sub.cancel();
   }
 }

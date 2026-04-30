@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'stock_history_widget.dart';
+import '../../../data/services/notification_service.dart'; // adjust path if needed
 
 // ─────────────────────────────────────────────
 // TODAY'S STOCK SUMMARY CHART WIDGET
@@ -15,7 +16,6 @@ class TodayStockChartWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final db = FirebaseFirestore.instance;
 
-    // Fuel types that have litres (exclude Air Pump)
     final fuelTypes = [
       'Petrol 92 Octane',
       'Petrol 95 Octane',
@@ -27,7 +27,6 @@ class TodayStockChartWidget extends StatelessWidget {
       'Lanka Fuel Oil 1500 Super',
     ];
 
-    // Short labels for chart X-axis
     final shortLabels = {
       'Petrol 92 Octane': 'P92',
       'Petrol 95 Octane': 'P95',
@@ -44,7 +43,6 @@ class TodayStockChartWidget extends StatelessWidget {
     final todayStartTs = Timestamp.fromDate(todayStart);
 
     return StreamBuilder<QuerySnapshot>(
-      // Get today's stock logs
       stream: db
           .collection('stations')
           .doc(uid)
@@ -53,7 +51,6 @@ class TodayStockChartWidget extends StatelessWidget {
           .snapshots(),
       builder: (context, logsSnap) {
         return StreamBuilder<QuerySnapshot>(
-          // Get current stock levels
           stream: db
               .collection('stations')
               .doc(uid)
@@ -66,16 +63,15 @@ class TodayStockChartWidget extends StatelessWidget {
               );
             }
 
-            // Build current stock map
             final currentStock = <String, double>{};
             for (final doc in stockSnap.data!.docs) {
               final data = doc.data() as Map<String, dynamic>;
               final fuel = data['fuelType'] as String? ?? '';
-              final litres = (data['stockLitres'] as num?)?.toDouble() ?? 0;
+              final litres =
+                  (data['stockLitres'] as num?)?.toDouble() ?? 0;
               currentStock[fuel] = litres;
             }
 
-            // Aggregate today's inflow and outflow per fuel
             final todayInflow = <String, double>{};
             final todayOutflow = <String, double>{};
             for (final fuel in fuelTypes) {
@@ -88,17 +84,15 @@ class TodayStockChartWidget extends StatelessWidget {
               final fuel = data['fuelType'] as String? ?? '';
               final type = data['type'] as String? ?? '';
               final amount = (data['amount'] as num?)?.toDouble() ?? 0;
-
               if (!fuelTypes.contains(fuel)) continue;
-
               if (type == 'inflow') {
                 todayInflow[fuel] = (todayInflow[fuel] ?? 0) + amount;
               } else if (type == 'outflow') {
-                todayOutflow[fuel] = (todayOutflow[fuel] ?? 0) + amount;
+                todayOutflow[fuel] =
+                    (todayOutflow[fuel] ?? 0) + amount;
               }
             }
 
-            // Check if there is any data to show
             final hasData = fuelTypes.any((f) =>
                 (todayInflow[f] ?? 0) > 0 ||
                 (todayOutflow[f] ?? 0) > 0 ||
@@ -108,12 +102,12 @@ class TodayStockChartWidget extends StatelessWidget {
               return const Center(
                 child: Text(
                   'No stock data for today yet',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                  style:
+                      TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               );
             }
 
-            // Only show fuels that have at least some data
             final activeFuels = fuelTypes
                 .where((f) =>
                     (todayInflow[f] ?? 0) > 0 ||
@@ -121,7 +115,6 @@ class TodayStockChartWidget extends StatelessWidget {
                     (currentStock[f] ?? 0) > 0)
                 .toList();
 
-            // Build bar groups
             final barGroups = <BarChartGroupData>[];
             for (int i = 0; i < activeFuels.length; i++) {
               final fuel = activeFuels[i];
@@ -129,21 +122,18 @@ class TodayStockChartWidget extends StatelessWidget {
                 BarChartGroupData(
                   x: i,
                   barRods: [
-                    // Received (inflow) - green
                     BarChartRodData(
                       toY: todayInflow[fuel] ?? 0,
                       color: Colors.greenAccent,
                       width: 8,
                       borderRadius: BorderRadius.circular(3),
                     ),
-                    // Sold (outflow) - orange/red
                     BarChartRodData(
                       toY: todayOutflow[fuel] ?? 0,
                       color: Colors.orangeAccent,
                       width: 8,
                       borderRadius: BorderRadius.circular(3),
                     ),
-                    // Remaining - blue/light
                     BarChartRodData(
                       toY: currentStock[fuel] ?? 0,
                       color: Colors.lightBlueAccent,
@@ -156,15 +146,13 @@ class TodayStockChartWidget extends StatelessWidget {
               );
             }
 
-            // Max Y value for chart scaling
             double maxY = 0;
             for (final fuel in activeFuels) {
-              final vals = [
+              for (final v in [
                 todayInflow[fuel] ?? 0,
                 todayOutflow[fuel] ?? 0,
                 currentStock[fuel] ?? 0,
-              ];
-              for (final v in vals) {
+              ]) {
                 if (v > maxY) maxY = v;
               }
             }
@@ -174,14 +162,14 @@ class TodayStockChartWidget extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Legend row
                 Row(
                   children: [
                     _chartLegend(Colors.greenAccent, 'Received'),
                     const SizedBox(width: 12),
                     _chartLegend(Colors.orangeAccent, 'Sold'),
                     const SizedBox(width: 12),
-                    _chartLegend(Colors.lightBlueAccent, 'Remaining'),
+                    _chartLegend(
+                        Colors.lightBlueAccent, 'Remaining'),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -196,11 +184,16 @@ class TodayStockChartWidget extends StatelessWidget {
                         touchTooltipData: BarTouchTooltipData(
                           getTooltipColor: (_) =>
                               Colors.black.withOpacity(0.8),
-                          getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                          getTooltipItem:
+                              (group, groupIndex, rod, rodIndex) {
                             final fuel = activeFuels[groupIndex];
-                            final labels = ['Received', 'Sold', 'Remaining'];
+                            final labels = [
+                              'Received',
+                              'Sold',
+                              'Remaining'
+                            ];
                             return BarTooltipItem(
-                              '${fuel}\n${labels[rodIndex]}: ${rod.toY.toStringAsFixed(0)}L',
+                              '$fuel\n${labels[rodIndex]}: ${rod.toY.toStringAsFixed(0)}L',
                               const TextStyle(
                                   color: Colors.white, fontSize: 11),
                             );
@@ -219,7 +212,8 @@ class TodayStockChartWidget extends StatelessWidget {
                                     ? '${(value / 1000).toStringAsFixed(1)}k'
                                     : value.toInt().toString(),
                                 style: const TextStyle(
-                                    color: Colors.white70, fontSize: 9),
+                                    color: Colors.white70,
+                                    fontSize: 9),
                               );
                             },
                           ),
@@ -230,25 +224,29 @@ class TodayStockChartWidget extends StatelessWidget {
                             reservedSize: 22,
                             getTitlesWidget: (value, meta) {
                               final idx = value.toInt();
-                              if (idx < 0 || idx >= activeFuels.length) {
+                              if (idx < 0 ||
+                                  idx >= activeFuels.length) {
                                 return const SizedBox();
                               }
-                              final fuel = activeFuels[idx];
                               return Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  shortLabels[fuel] ?? fuel,
+                                  shortLabels[activeFuels[idx]] ??
+                                      activeFuels[idx],
                                   style: const TextStyle(
-                                      color: Colors.white70, fontSize: 9),
+                                      color: Colors.white70,
+                                      fontSize: 9),
                                 ),
                               );
                             },
                           ),
                         ),
                         topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
+                            sideTitles:
+                                SideTitles(showTitles: false)),
                         rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
+                            sideTitles:
+                                SideTitles(showTitles: false)),
                       ),
                       gridData: FlGridData(
                         show: true,
@@ -285,7 +283,8 @@ class TodayStockChartWidget extends StatelessWidget {
         ),
         const SizedBox(width: 4),
         Text(label,
-            style: const TextStyle(color: Colors.white70, fontSize: 10)),
+            style:
+                const TextStyle(color: Colors.white70, fontSize: 10)),
       ],
     );
   }
@@ -298,12 +297,15 @@ class StockManagementScreen extends StatefulWidget {
   const StockManagementScreen({super.key});
 
   @override
-  State<StockManagementScreen> createState() => _StockManagementScreenState();
+  State<StockManagementScreen> createState() =>
+      _StockManagementScreenState();
 }
 
-class _StockManagementScreenState extends State<StockManagementScreen> {
+class _StockManagementScreenState
+    extends State<StockManagementScreen> {
   final _db = FirebaseFirestore.instance;
-  String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
+  String get _uid =>
+      FirebaseAuth.instance.currentUser?.uid ?? '';
 
   final List<String> _fuelTypes = [
     'Air Pump',
@@ -400,6 +402,14 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
       'amount': amount,
       'timestamp': FieldValue.serverTimestamp(),
     });
+
+    // ✅ Notification
+    await NotificationService.onStockUpdated(
+      stationId: _uid,
+      fuelType: fuel,
+      changeType: 'inflow',
+      amount: amount,
+    );
   }
 
   Future<void> _reduceStock(String fuel, double amount) async {
@@ -413,12 +423,13 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
 
     final price = await _getFuelPrice(fuel);
     final revenue = amount * price;
+    double newStock = 0;
 
     await _db.runTransaction((tx) async {
       final snap = await tx.get(ref);
       final current =
           (snap.data()?['stockLitres'] as num?)?.toDouble() ?? 0;
-      final newStock = (current - amount).clamp(0, double.infinity);
+      newStock = (current - amount).clamp(0, double.infinity);
       tx.update(ref, {
         'stockLitres': newStock,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -453,6 +464,15 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
     await _db.collection('stations').doc(_uid).update({
       'totalRevenue': FieldValue.increment(revenue),
     });
+
+    // ✅ Notification (also auto-triggers low stock alert if < 200L)
+    await NotificationService.onStockUpdated(
+      stationId: _uid,
+      fuelType: fuel,
+      changeType: 'outflow',
+      amount: amount,
+      currentStock: newStock,
+    );
   }
 
   Future<void> _editStock(String fuel, double newAmount) async {
@@ -478,6 +498,15 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
       'amount': newAmount,
       'timestamp': FieldValue.serverTimestamp(),
     });
+
+    // ✅ Notification
+    await NotificationService.onStockUpdated(
+      stationId: _uid,
+      fuelType: fuel,
+      changeType: 'edit',
+      amount: newAmount,
+      currentStock: newAmount,
+    );
   }
 
   Future<void> _toggleAirPump(bool available) async {
@@ -542,15 +571,16 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'Current: ${currentStock.toStringAsFixed(1)} L',
-                  style:
-                      const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: const TextStyle(
+                      color: Colors.grey, fontSize: 12),
                 ),
                 const SizedBox(height: 8),
                 if (selectedTab == 0)
                   TextField(
                     controller: inflowCtrl,
-                    keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(
+                            decimal: true),
                     decoration: InputDecoration(
                       labelText: 'Litres received (inflow)',
                       border: OutlineInputBorder(
@@ -564,8 +594,9 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
                 else if (selectedTab == 1)
                   TextField(
                     controller: outflowCtrl,
-                    keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(
+                            decimal: true),
                     decoration: InputDecoration(
                       labelText: 'Litres sold (outflow)',
                       border: OutlineInputBorder(
@@ -579,16 +610,17 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
                 else
                   TextField(
                     controller: editCtrl,
-                    keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(
+                            decimal: true),
                     decoration: InputDecoration(
                       labelText: 'Set stock to (Litres)',
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8)),
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 10),
-                      prefixIcon:
-                          const Icon(Icons.edit, color: Colors.orange),
+                      prefixIcon: const Icon(Icons.edit,
+                          color: Colors.orange),
                     ),
                   ),
               ],
@@ -606,7 +638,8 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
                   setState(() => _isSaving = true);
                   try {
                     if (selectedTab == 0) {
-                      final amount = double.tryParse(inflowCtrl.text);
+                      final amount =
+                          double.tryParse(inflowCtrl.text);
                       if (amount != null && amount > 0) {
                         await _addInflow(fuel, amount);
                       }
@@ -617,7 +650,8 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
                         await _reduceStock(fuel, amount);
                       }
                     } else {
-                      final amount = double.tryParse(editCtrl.text);
+                      final amount =
+                          double.tryParse(editCtrl.text);
                       if (amount != null && amount >= 0) {
                         await _editStock(fuel, amount);
                       }
@@ -677,11 +711,12 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
               children: [
                 const Text(
                     'Set air pump availability for customers:',
-                    style:
-                        TextStyle(color: Colors.grey, fontSize: 13)),
+                    style: TextStyle(
+                        color: Colors.grey, fontSize: 13)),
                 const SizedBox(height: 16),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  mainAxisAlignment:
+                      MainAxisAlignment.spaceEvenly,
                   children: [
                     GestureDetector(
                       onTap: () async {
@@ -747,8 +782,8 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
     );
   }
 
-  Widget _tabBtn(
-      String label, int index, int selected, Function(int) onTap) {
+  Widget _tabBtn(String label, int index, int selected,
+      Function(int) onTap) {
     final isSelected = selected == index;
     return Expanded(
       child: GestureDetector(
@@ -756,8 +791,9 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color:
-                isSelected ? const Color(0xFF8B0000) : Colors.grey[200],
+            color: isSelected
+                ? const Color(0xFF8B0000)
+                : Colors.grey[200],
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
@@ -774,7 +810,8 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
     );
   }
 
-  Color _stockColor(double litres, String fuel, bool? available) {
+  Color _stockColor(
+      double litres, String fuel, bool? available) {
     if (fuel == 'Air Pump') {
       return available == true ? Colors.green : Colors.red;
     }
@@ -784,7 +821,8 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
     return Colors.green;
   }
 
-  String _stockLabel(double litres, String fuel, bool? available) {
+  String _stockLabel(
+      double litres, String fuel, bool? available) {
     if (fuel == 'Air Pump') {
       return available == true ? 'Available' : 'Unavailable';
     }
@@ -837,7 +875,8 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
         ),
         title: const Text('Stock Management',
             style: TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold)),
+                color: Colors.white,
+                fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: _uid.isEmpty
@@ -876,9 +915,11 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
                               (data['stockLitres'] as num?)
                                       ?.toDouble() ??
                                   0;
-                          final avail = data['available'] as bool?;
+                          final avail =
+                              data['available'] as bool?;
                           stockMap[fuel] = litres;
-                          if (avail != null) availMap[fuel] = avail;
+                          if (avail != null)
+                            availMap[fuel] = avail;
                         }
 
                         Timestamp? lastUpdated;
@@ -887,7 +928,8 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
                                   as Map)['updatedAt'] as Timestamp?;
                           if (ts != null &&
                               (lastUpdated == null ||
-                                  ts.seconds > lastUpdated.seconds)) {
+                                  ts.seconds >
+                                      lastUpdated.seconds)) {
                             lastUpdated = ts;
                           }
                         }
@@ -899,7 +941,8 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: const Color(0xFF8B0000),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius:
+                                BorderRadius.circular(12),
                           ),
                           child: Column(
                             crossAxisAlignment:
@@ -929,28 +972,33 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
                                 child: ListView.builder(
                                   itemCount: _fuelTypes.length,
                                   itemBuilder: (context, index) {
-                                    final fuel = _fuelTypes[index];
+                                    final fuel =
+                                        _fuelTypes[index];
                                     final litres =
                                         stockMap[fuel] ?? 0;
-                                    final available = availMap[fuel];
+                                    final available =
+                                        availMap[fuel];
                                     final color = _stockColor(
                                         litres, fuel, available);
                                     final label = _stockLabel(
                                         litres, fuel, available);
                                     return GestureDetector(
-                                      onTap: () => _showStockDialog(
-                                          fuel, litres),
+                                      onTap: () =>
+                                          _showStockDialog(
+                                              fuel, litres),
                                       child: Container(
-                                        margin: const EdgeInsets.only(
-                                            bottom: 8),
-                                        padding:
-                                            const EdgeInsets.symmetric(
+                                        margin:
+                                            const EdgeInsets.only(
+                                                bottom: 8),
+                                        padding: const EdgeInsets
+                                            .symmetric(
                                                 horizontal: 12,
                                                 vertical: 10),
                                         decoration: BoxDecoration(
                                           color: Colors.white,
                                           borderRadius:
-                                              BorderRadius.circular(8),
+                                              BorderRadius.circular(
+                                                  8),
                                         ),
                                         child: Row(
                                           children: [
@@ -960,7 +1008,8 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
                                                 style: const TextStyle(
                                                     fontSize: 13,
                                                     fontWeight:
-                                                        FontWeight.w500),
+                                                        FontWeight
+                                                            .w500),
                                               ),
                                             ),
                                             Text(
@@ -969,19 +1018,24 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
                                                   color: color,
                                                   fontSize: 12),
                                             ),
-                                            const SizedBox(width: 8),
+                                            const SizedBox(
+                                                width: 8),
                                             Container(
                                               width: 10,
                                               height: 10,
-                                              decoration: BoxDecoration(
+                                              decoration:
+                                                  BoxDecoration(
                                                 color: color,
-                                                shape: BoxShape.circle,
+                                                shape:
+                                                    BoxShape.circle,
                                               ),
                                             ),
-                                            const SizedBox(width: 4),
+                                            const SizedBox(
+                                                width: 4),
                                             const Icon(Icons.edit,
                                                 size: 14,
-                                                color: Colors.grey),
+                                                color:
+                                                    Colors.grey),
                                           ],
                                         ),
                                       ),
@@ -1008,12 +1062,14 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
                               const Icon(Icons.bar_chart,
-                                  color: Colors.white70, size: 16),
+                                  color: Colors.white70,
+                                  size: 16),
                               const SizedBox(width: 6),
                               const Text(
                                 "Today's Stock Summary",
@@ -1024,16 +1080,17 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 4),
                           Text(
                             'Tap bars for details',
                             style: TextStyle(
-                                color: Colors.white.withOpacity(0.5),
+                                color: Colors.white
+                                    .withOpacity(0.5),
                                 fontSize: 10),
                           ),
                           const SizedBox(height: 8),
                           Expanded(
-                            child: TodayStockChartWidget(uid: _uid),
+                            child:
+                                TodayStockChartWidget(uid: _uid),
                           ),
                         ],
                       ),
@@ -1052,7 +1109,8 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
                         children: [
                           const Text('Stock History',
                               style: TextStyle(
@@ -1061,7 +1119,8 @@ class _StockManagementScreenState extends State<StockManagementScreen> {
                                   fontSize: 14)),
                           const SizedBox(height: 8),
                           Expanded(
-                            child: StockHistoryWidget(uid: _uid),
+                            child:
+                                StockHistoryWidget(uid: _uid),
                           ),
                         ],
                       ),
