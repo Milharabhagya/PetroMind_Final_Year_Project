@@ -1,9 +1,47 @@
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
+import 'admin_login_screen.dart';
 
-class AuthScreen extends StatelessWidget {
+class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
+
+  @override
+  State<AuthScreen> createState() => _AuthScreenState();
+}
+
+class _AuthScreenState extends State<AuthScreen> {
+  int _logoTapCount = 0;
+  DateTime? _firstTapTime;
+
+  void _onLogoTap() {
+    final now = DateTime.now();
+
+    // Reset counter if more than 3 seconds have passed
+    if (_firstTapTime != null &&
+        now.difference(_firstTapTime!).inSeconds > 3) {
+      _logoTapCount = 0;
+      _firstTapTime = null;
+    }
+
+    if (_logoTapCount == 0) _firstTapTime = now;
+    _logoTapCount++;
+
+    if (_logoTapCount >= 5) {
+      _logoTapCount = 0;
+      _firstTapTime = null;
+      // Navigate to admin login with fade transition
+      Navigator.push(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) =>
+              const AdminLoginScreen(),
+          transitionsBuilder: (_, anim, __, child) =>
+              FadeTransition(opacity: anim, child: child),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,22 +56,29 @@ class AuthScreen extends StatelessWidget {
         ),
         child: SafeArea(
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 28),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 28),
             child: Column(
               children: [
                 const Spacer(),
 
-                // ── LOGO + TITLE ──
+                // ── LOGO + TITLE (tap 5x fast = admin) ──
                 Column(
                   children: [
-                    Image.asset(
-                      'assets/images/logo.png',
-                      height: 100,
-                      errorBuilder: (c, e, s) => const Icon(
-                        Icons.local_gas_station,
-                        color: Colors.amber,
-                        size: 80,
+                    GestureDetector(
+                      onTap: _onLogoTap,
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        height: 100,
+                        errorBuilder: (c, e, s) =>
+                            GestureDetector(
+                          onTap: _onLogoTap,
+                          child: const Icon(
+                            Icons.local_gas_station,
+                            color: Colors.amber,
+                            size: 80,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -66,13 +111,15 @@ class AuthScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(25),
+                    borderRadius:
+                        BorderRadius.circular(25),
                     border: Border.all(
-                        color: Colors.white.withOpacity(0.2)),
+                        color:
+                            Colors.white.withOpacity(0.2)),
                   ),
                   child: Column(
                     children: [
-                      // LOGIN BUTTON
+                      // ── LOGIN BUTTON ──
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -105,7 +152,7 @@ class AuthScreen extends StatelessWidget {
 
                       const SizedBox(height: 14),
 
-                      // SIGN UP BUTTON
+                      // ── CREATE ACCOUNT BUTTON ──
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton(
@@ -143,13 +190,13 @@ class AuthScreen extends StatelessWidget {
 
                 const SizedBox(height: 30),
 
-                // ── STATION OWNER LINK ──
+                // ── STATION OWNER SUBTLE LINK ──
                 GestureDetector(
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          const LoginScreen(isStation: true),
+                      builder: (_) => const LoginScreen(
+                          isStation: true),
                     ),
                   ),
                   child: Text(
@@ -157,8 +204,7 @@ class AuthScreen extends StatelessWidget {
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.5),
                       fontSize: 12,
-                      decoration:
-                          TextDecoration.underline,
+                      decoration: TextDecoration.underline,
                     ),
                   ),
                 ),
