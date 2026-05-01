@@ -12,7 +12,6 @@ import 'station_notifications_screen.dart';
 import 'station_profile_screen.dart';
 import 'customer_feedback_screen.dart';
 import 'admin_settings_screen.dart';
-import 'registration_report_screen.dart';
 import '../auth/auth_screen.dart';
 import '../prices/admin_price_screen.dart';
 
@@ -27,7 +26,6 @@ class StationDashboardScreen extends StatefulWidget {
 class _StationDashboardScreenState
     extends State<StationDashboardScreen> {
 
-  // ── Price change listener cancel function ──
   Function()? _cancelPriceListener;
 
   @override
@@ -35,20 +33,17 @@ class _StationDashboardScreenState
     super.initState();
     Future.delayed(
         const Duration(seconds: 2), _checkStockAlerts);
-
-    // ── Start listening to government fuel price changes ──
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final uid =
+        FirebaseAuth.instance.currentUser?.uid ?? '';
     if (uid.isNotEmpty) {
       _cancelPriceListener =
           NotificationService.listenToGlobalPriceChanges(
-        stationId: uid,
-      );
+              stationId: uid);
     }
   }
 
   @override
   void dispose() {
-    // ── Cancel listener when dashboard is disposed ──
     _cancelPriceListener?.call();
     super.dispose();
   }
@@ -126,8 +121,7 @@ class _StationDashboardScreenState
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: const Color(0xFF8B0000),
-                  borderRadius:
-                      BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                       color:
                           Colors.orange.withOpacity(0.5)),
@@ -238,75 +232,6 @@ class _StationDashboardScreenState
                   },
                 );
               },
-            ),
-            const SizedBox(height: 16),
-
-            // ── REGISTRATION REPORT BANNER ──
-            GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        const RegistrationReportScreen()),
-              ),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius:
-                      BorderRadius.circular(12),
-                  border: Border.all(
-                      color: const Color(0xFF8B0000)
-                          .withValues(alpha: 0.3)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black
-                          .withValues(alpha: 0.04),
-                      blurRadius: 6,
-                    )
-                  ],
-                ),
-                child: Row(children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF8B0000)
-                          .withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.bar_chart,
-                        color: Color(0xFF8B0000),
-                        size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Customer Registration Report',
-                          style: TextStyle(
-                              fontWeight:
-                                  FontWeight.bold,
-                              fontSize: 13,
-                              color: Color(0xFF8B0000)),
-                        ),
-                        Text(
-                          'View monthly registration trends',
-                          style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.arrow_forward_ios,
-                      color: Color(0xFF8B0000),
-                      size: 14),
-                ]),
-              ),
             ),
             const SizedBox(height: 16),
 
@@ -486,8 +411,7 @@ class _StationDashboardScreenState
               Expanded(
                 child: GestureDetector(
                   onTap: () async {
-                    await AlertRepository
-                        .alertMaintenance(
+                    await AlertRepository.alertMaintenance(
                       stationId: uid,
                       stationName: stationName,
                       isClosed: true,
@@ -537,8 +461,7 @@ class _StationDashboardScreenState
               Expanded(
                 child: GestureDetector(
                   onTap: () async {
-                    await AlertRepository
-                        .alertMaintenance(
+                    await AlertRepository.alertMaintenance(
                       stationId: uid,
                       stationName: stationName,
                       isClosed: false,
@@ -610,8 +533,7 @@ class _StationDashboardScreenState
                     children: [
                       Row(
                         mainAxisAlignment:
-                            MainAxisAlignment
-                                .spaceBetween,
+                            MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('Recent Activity',
                               style: TextStyle(
@@ -629,8 +551,7 @@ class _StationDashboardScreenState
                             child: const Text(
                                 'See All >',
                                 style: TextStyle(
-                                    color:
-                                        Colors.white70,
+                                    color: Colors.white70,
                                     fontSize: 12)),
                           ),
                         ],
@@ -653,8 +574,7 @@ class _StationDashboardScreenState
                           final ts = data['timestamp']
                               as Timestamp?;
                           final timeStr = ts != null
-                              ? _formatTime(
-                                  ts.toDate())
+                              ? _formatTime(ts.toDate())
                               : '';
                           return _activityRow(
                               msg, timeStr);
@@ -711,7 +631,6 @@ class _StationDashboardScreenState
         ),
       ),
       actions: [
-        // ── Notification bell with unread badge ──
         StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection('stations')
@@ -832,15 +751,6 @@ class _StationDashboardScreenState
                   MaterialPageRoute(
                       builder: (_) =>
                           const SalesTransactionsScreen()));
-            }),
-            _drawerItem(context, Icons.bar_chart,
-                'Registration Report', () {
-              Navigator.pop(context);
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) =>
-                          const RegistrationReportScreen()));
             }),
             _drawerItem(context, Icons.notifications,
                 'Notifications', () {

@@ -8,7 +8,7 @@ import 'admin_stations_screen.dart';
 import 'admin_stock_analysis_screen.dart';
 import 'admin_broadcast_screen.dart';
 import '../prices/admin_price_screen.dart';
-import '../station/registration_report_screen.dart';
+import '../admin/registration_report_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});

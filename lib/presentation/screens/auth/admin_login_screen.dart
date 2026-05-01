@@ -42,13 +42,21 @@ class _AdminLoginScreenState
     });
 
     try {
-      // Step 1: Firebase Auth
+      // Step 1: Firebase Auth sign in
       final credential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(
               email: email, password: password);
 
       if (!mounted) return;
       final uid = credential.user?.uid ?? '';
+
+      if (uid.isEmpty) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Login failed. Please try again.';
+        });
+        return;
+      }
 
       // Step 2: Verify admin role in Firestore
       final adminDoc = await FirebaseFirestore.instance
@@ -59,7 +67,6 @@ class _AdminLoginScreenState
       if (!mounted) return;
 
       if (!adminDoc.exists) {
-        // Not an admin — sign out immediately
         await FirebaseAuth.instance.signOut();
         if (!mounted) return;
         setState(() {
@@ -70,7 +77,7 @@ class _AdminLoginScreenState
         return;
       }
 
-      // Step 3: Navigate to admin dashboard
+      // Step 3: Success — navigate to admin dashboard
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
@@ -149,7 +156,8 @@ class _AdminLoginScreenState
                     color: Colors.amber.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                        color: Colors.amber.withOpacity(0.5)),
+                        color:
+                            Colors.amber.withOpacity(0.5)),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
@@ -202,8 +210,8 @@ class _AdminLoginScreenState
                     color: Colors.white.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                        color:
-                            Colors.white.withOpacity(0.15))),
+                        color: Colors.white
+                            .withOpacity(0.15))),
                 child: TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -235,8 +243,8 @@ class _AdminLoginScreenState
                     color: Colors.white.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                        color:
-                            Colors.white.withOpacity(0.15))),
+                        color: Colors.white
+                            .withOpacity(0.15))),
                 child: TextField(
                   controller: _passwordController,
                   obscureText: !_showPassword,
@@ -281,8 +289,8 @@ class _AdminLoginScreenState
                       borderRadius:
                           BorderRadius.circular(8),
                       border: Border.all(
-                          color:
-                              Colors.red.withOpacity(0.4))),
+                          color: Colors.red
+                              .withOpacity(0.4))),
                   child: Row(children: [
                     const Icon(Icons.error_outline,
                         color: Colors.redAccent, size: 16),
