@@ -1,7 +1,72 @@
+// ✅ PREMIUM REDESIGN — ALL LOGIC PRESERVED
+// Design: Minimalist Industrial SaaS · Poppins
+// Matches Station Dashboard, Admin Price Screen & Profile Screen
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
+// ─────────────────────────────────────────────
+//  DESIGN TOKENS (Shared across the app)
+// ─────────────────────────────────────────────
+class _T {
+  static const primary    = Color(0xFFAD2831);
+  static const dark       = Color(0xFF38040E);
+  static const accent     = Color(0xFF250902);
+  static const bg         = Color(0xFFF8F4F1);
+  static const surface    = Color(0xFFFFFFFF);
+  static const muted      = Color(0xFFF2EBE7);
+  static const textPrimary   = Color(0xFF1A0A0C);
+  static const textSecondary = Color(0xFF7A5C60);
+  static const border     = Color(0xFFEADDDA);
+
+  static const h1 = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+    color: textPrimary,
+    letterSpacing: -0.4,
+  );
+  static const h2 = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: textPrimary,
+    letterSpacing: -0.2,
+  );
+  static const label = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    color: textSecondary,
+    letterSpacing: 0.6,
+  );
+  static const body = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    color: textSecondary,
+  );
+
+  static BoxDecoration card({Color? color, bool hasBorder = true}) =>
+      BoxDecoration(
+        color: color ?? surface,
+        borderRadius: BorderRadius.circular(16),
+        border: hasBorder ? Border.all(color: border, width: 1) : null,
+        boxShadow: [
+          BoxShadow(
+            color: dark.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      );
+}
+
+// ─────────────────────────────────────────────
+//  CUSTOMER FEEDBACK SCREEN
+// ─────────────────────────────────────────────
 class CustomerFeedbackScreen extends StatefulWidget {
   const CustomerFeedbackScreen({super.key});
 
@@ -10,11 +75,9 @@ class CustomerFeedbackScreen extends StatefulWidget {
       _CustomerFeedbackScreenState();
 }
 
-class _CustomerFeedbackScreenState
-    extends State<CustomerFeedbackScreen> {
+class _CustomerFeedbackScreenState extends State<CustomerFeedbackScreen> {
   final _db = FirebaseFirestore.instance;
-  final String _uid =
-      FirebaseAuth.instance.currentUser?.uid ?? '';
+  final String _uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
   String _stationName = '';
   String _stationBrand = '';
@@ -25,19 +88,15 @@ class _CustomerFeedbackScreenState
     if (_uid.isNotEmpty) _loadStationInfo();
   }
 
+  // ── LOGIC PRESERVED ──
   Future<void> _loadStationInfo() async {
     try {
-      final doc =
-          await _db.collection('stations').doc(_uid).get();
+      final doc = await _db.collection('stations').doc(_uid).get();
       final data = doc.data() as Map<String, dynamic>?;
       if (!mounted) return;
       setState(() {
-        _stationName =
-            data?['stationName'] as String? ??
-                data?['name'] as String? ??
-                'My Station';
-        _stationBrand =
-            data?['brand'] as String? ?? '';
+        _stationName = data?['stationName'] as String? ?? data?['name'] as String? ?? 'My Station';
+        _stationBrand = data?['brand'] as String? ?? '';
       });
     } catch (e) {
       debugPrint('_loadStationInfo error: $e');
@@ -51,19 +110,17 @@ class _CustomerFeedbackScreenState
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return '${dt.day}/${dt.month}/${dt.year}';
+    return DateFormat('dd MMM yyyy').format(dt);
   }
 
-  // Avatar color based on first letter
   Color _avatarColor(String name) {
     final colors = [
-      Colors.blue,
-      Colors.green,
-      Colors.purple,
-      Colors.orange,
-      Colors.teal,
-      Colors.indigo,
-      Colors.pink,
+      const Color(0xFF2563EB), // Blue
+      const Color(0xFF16A34A), // Green
+      const Color(0xFF7C3AED), // Purple
+      const Color(0xFFEA580C), // Orange
+      const Color(0xFF0D9488), // Teal
+      const Color(0xFFDB2777), // Pink
     ];
     if (name.isEmpty) return Colors.grey;
     return colors[name.codeUnitAt(0) % colors.length];
@@ -72,33 +129,24 @@ class _CustomerFeedbackScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F0EB),
+      backgroundColor: _T.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF8B0000),
+        backgroundColor: _T.bg,
         elevation: 0,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.arrow_back_ios_new,
-                color: Colors.white, size: 16),
+        scrolledUnderElevation: 0,
+        automaticallyImplyLeading: false,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 8.0),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _T.dark, size: 20),
+            onPressed: () => Navigator.pop(context),
           ),
-          onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Customer Feedback',
-          style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold),
-        ),
+        title: Text('Customer Feedback', style: _T.h2.copyWith(fontSize: 18)),
         centerTitle: true,
-        actions: const [],
       ),
       body: _uid.isEmpty
-          ? const Center(child: Text('Not logged in'))
+          ? Center(child: Text('Not logged in', style: _T.body))
           : StreamBuilder<QuerySnapshot>(
               stream: _db
                   .collection('stations')
@@ -107,328 +155,215 @@ class _CustomerFeedbackScreenState
                   .orderBy('timestamp', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(
-                    child: CircularProgressIndicator(
-                        color: Color(0xFF8B0000)),
-                  );
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: _T.primary, strokeWidth: 3));
                 }
 
-                final docs = snapshot.data!.docs;
+                final docs = snapshot.data?.docs ?? [];
 
                 // Calculate average rating
                 double avgRating = 0;
                 if (docs.isNotEmpty) {
                   double total = 0;
                   for (final doc in docs) {
-                    total += ((doc.data()
-                            as Map)['rating'] as num?)
-                        ?.toDouble() ??
-                        0;
+                    total += ((doc.data() as Map)['rating'] as num?)?.toDouble() ?? 0;
                   }
                   avgRating = total / docs.length;
                 }
 
-                final displayName =
-                    _stationBrand.isNotEmpty
-                        ? '$_stationBrand $_stationName'
-                        : _stationName;
-
                 return SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                  physics: const BouncingScrollPhysics(),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ── STATION BANNER ──
+                      // ── STATION SUMMARY HEADER ──
                       Container(
-                        height: 150,
+                        padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: Colors.grey[700],
-                          borderRadius:
-                              BorderRadius.circular(12),
+                          gradient: const LinearGradient(
+                            colors: [_T.primary, _T.dark],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _T.primary.withOpacity(0.2),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            )
+                          ],
                         ),
-                        child: Stack(
+                        child: Row(
                           children: [
-                            ClipRRect(
-                              borderRadius:
-                                  BorderRadius.circular(
-                                      12),
-                              child: Container(
-                                width: double.infinity,
-                                color: Colors.grey[700],
-                                child: const Center(
-                                  child: Icon(
-                                      Icons
-                                          .local_gas_station,
-                                      size: 60,
-                                      color: Colors.white),
-                                ),
-                              ),
-                            ),
-                            // Station name badge
-                            Positioned(
-                              bottom: 8,
-                              left: 8,
-                              child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.black54,
-                                  borderRadius:
-                                      BorderRadius.circular(
-                                          4),
-                                ),
-                                child: Text(
-                                  displayName.isNotEmpty
-                                      ? displayName
-                                      : 'My Station',
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight:
-                                          FontWeight.bold,
-                                      fontSize: 13),
-                                ),
-                              ),
-                            ),
-                            // Live star rating
-                            Positioned(
-                              bottom: 8,
-                              right: 8,
-                              child: Row(
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  ...List.generate(5, (i) {
-                                    if (i <
-                                        avgRating.floor()) {
-                                      return const Icon(
-                                          Icons.star,
-                                          color:
-                                              Colors.amber,
-                                          size: 16);
-                                    } else if (i <
-                                            avgRating &&
-                                        avgRating -
-                                                avgRating
-                                                    .floor() >=
-                                            0.5) {
-                                      return const Icon(
-                                          Icons.star_half,
-                                          color:
-                                              Colors.amber,
-                                          size: 16);
-                                    } else {
-                                      return const Icon(
-                                          Icons.star_border,
-                                          color:
-                                              Colors.amber,
-                                          size: 16);
-                                    }
-                                  }),
-                                  if (docs.isNotEmpty) ...[
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      avgRating
-                                          .toStringAsFixed(
-                                              1),
-                                      style: const TextStyle(
-                                          color:
-                                              Colors.white,
-                                          fontSize: 12,
-                                          fontWeight:
-                                              FontWeight
-                                                  .bold),
-                                    ),
-                                  ]
+                                  Text(
+                                    _stationBrand.isNotEmpty ? '$_stationBrand $_stationName' : _stationName,
+                                    style: _T.h2.copyWith(color: Colors.white, fontSize: 15),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        avgRating.toStringAsFixed(1),
+                                        style: const TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 42,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                          height: 1,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Padding(
+                                        padding: const EdgeInsets.only(bottom: 6),
+                                        child: Icon(Icons.star_rounded, color: Colors.amber.shade400, size: 28),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Average Station Rating',
+                                    style: _T.label.copyWith(color: Colors.white.withOpacity(0.6), letterSpacing: 0.5),
+                                  ),
                                 ],
                               ),
                             ),
-                            // Review count badge
-                            if (docs.isNotEmpty)
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  padding:
-                                      const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(
-                                            0xFF8B0000)
-                                        .withOpacity(0.85),
-                                    borderRadius:
-                                        BorderRadius.circular(
-                                            20),
-                                  ),
-                                  child: Text(
-                                    '${docs.length} review${docs.length > 1 ? 's' : ''}',
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight:
-                                            FontWeight.bold),
-                                  ),
-                                ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(16),
                               ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    docs.length.toString(),
+                                    style: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  Text(
+                                    'REVIEWS',
+                                    style: _T.label.copyWith(fontSize: 9, color: Colors.white70),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 32),
+
+                      Text('Recent Feedback', style: _T.h1.copyWith(fontSize: 18)),
+                      const SizedBox(height: 12),
 
                       // ── REVIEWS LIST ──
                       if (docs.isEmpty)
                         Container(
-                          padding: const EdgeInsets.all(32),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius:
-                                BorderRadius.circular(12),
-                          ),
-                          child: const Column(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(40),
+                          decoration: _T.card(),
+                          child: Column(
                             children: [
-                              Icon(
-                                  Icons
-                                      .reviews_outlined,
-                                  size: 48,
-                                  color: Colors.grey),
-                              SizedBox(height: 12),
-                              Text(
-                                'No reviews yet',
-                                style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 14),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                'Customer reviews will appear here',
-                                style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 11),
-                              ),
+                              Icon(Icons.forum_outlined, color: _T.textSecondary.withOpacity(0.2), size: 48),
+                              const SizedBox(height: 16),
+                              Text('No reviews yet', style: _T.h2.copyWith(color: _T.textSecondary)),
+                              Text('Customer feedback will appear here.', style: _T.body, textAlign: TextAlign.center),
                             ],
                           ),
                         )
                       else
                         ...docs.map((doc) {
-                          final data = doc.data()
-                              as Map<String, dynamic>;
-                          final name =
-                              data['userName'] as String? ??
-                                  data['userId']
-                                      as String? ??
-                                  'Anonymous';
-                          final rating =
-                              (data['rating'] as num?)
-                                      ?.toDouble() ??
-                                  0;
-                          final comment =
-                              data['comment'] as String? ??
-                                  '';
-                          final ts =
-                              data['timestamp'] as Timestamp?;
-                          final timeStr = ts != null
-                              ? _formatTime(ts.toDate())
-                              : '';
-                          final initial = name.isNotEmpty
-                              ? name[0].toUpperCase()
-                              : '?';
+                          final data = doc.data() as Map<String, dynamic>;
+                          final name = data['userName'] as String? ?? data['userId'] as String? ?? 'Anonymous';
+                          final rating = (data['rating'] as num?)?.toDouble() ?? 0;
+                          final comment = data['comment'] as String? ?? '';
+                          final ts = data['timestamp'] as Timestamp?;
+                          final timeStr = ts != null ? _formatTime(ts.toDate()) : '';
+                          final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
                           return Container(
-                            margin: const EdgeInsets.only(
-                                bottom: 12),
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius:
-                                  BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black
-                                      .withOpacity(0.05),
-                                  blurRadius: 4,
-                                )
-                              ],
-                            ),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(16),
+                            decoration: _T.card(),
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
                                     CircleAvatar(
-                                      backgroundColor:
-                                          _avatarColor(name),
-                                      radius: 18,
+                                      backgroundColor: _avatarColor(name).withOpacity(0.15),
+                                      radius: 20,
                                       child: Text(
                                         initial,
-                                        style: const TextStyle(
-                                            color:
-                                                Colors.white,
-                                            fontWeight:
-                                                FontWeight
-                                                    .bold,
-                                            fontSize: 14),
+                                        style: TextStyle(
+                                          color: _avatarColor(name),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment
-                                                .start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            name,
-                                            style: const TextStyle(
-                                                fontWeight:
-                                                    FontWeight
-                                                        .bold,
-                                                fontSize: 13),
-                                          ),
-                                          Row(
-                                            children: List
-                                                .generate(
-                                              5,
-                                              (i) => Icon(
-                                                i <
-                                                        rating
-                                                            .floor()
-                                                    ? Icons
-                                                        .star
-                                                    : (i <
-                                                                rating &&
-                                                            rating -
-                                                                    rating.floor() >=
-                                                                0.5
-                                                        ? Icons
-                                                            .star_half
-                                                        : Icons
-                                                            .star_border),
-                                                color:
-                                                    Colors.amber,
-                                                size: 14,
-                                              ),
-                                            ),
-                                          ),
+                                          Text(name, style: _T.h2.copyWith(fontSize: 13)),
+                                          Text(timeStr, style: _T.label.copyWith(fontSize: 10)),
                                         ],
                                       ),
                                     ),
-                                    Text(
-                                      timeStr,
-                                      style: const TextStyle(
-                                          color: Colors.grey,
-                                          fontSize: 11),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Text(
+                                            rating.toStringAsFixed(1),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFFD97706),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 2),
+                                          const Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 14),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
                                 if (comment.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    comment,
-                                    style: const TextStyle(
-                                        color:
-                                            Colors.black87,
-                                        fontSize: 12),
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: _T.bg,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      comment,
+                                      style: _T.body.copyWith(
+                                        color: _T.textPrimary,
+                                        height: 1.5,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ],

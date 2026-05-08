@@ -1,7 +1,57 @@
+// ✅ PREMIUM REDESIGN — ALL LOGIC PRESERVED
+// Design: Minimalist Industrial SaaS · Poppins
+// Matches HomeScreen, PriceScreen & AlertsScreen Design System
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:petromind/data/services/user_provider.dart'; // ✅ FIXED
+import 'package:petromind/data/services/user_provider.dart';
 
+// ─────────────────────────────────────────────
+//  DESIGN TOKENS (Shared across the app)
+// ─────────────────────────────────────────────
+class _T {
+  static const primary    = Color(0xFFAD2831);
+  static const dark       = Color(0xFF38040E);
+  static const accent     = Color(0xFF250902);
+  static const bg         = Color(0xFFF8F4F1);
+  static const surface    = Color(0xFFFFFFFF);
+  static const muted      = Color(0xFFF2EBE7);
+  static const textPrimary   = Color(0xFF1A0A0C);
+  static const textSecondary = Color(0xFF7A5C60);
+  static const border     = Color(0xFFEADDDA);
+
+  static const h1 = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+    color: textPrimary,
+    letterSpacing: -0.4,
+  );
+  static const h2 = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: textPrimary,
+    letterSpacing: -0.2,
+  );
+  static const label = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    color: textSecondary,
+    letterSpacing: 0.6,
+  );
+  static const body = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    color: textSecondary,
+  );
+}
+
+// ─────────────────────────────────────────────
+//  PROFILE SCREEN
+// ─────────────────────────────────────────────
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -18,14 +68,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    final provider =
-        Provider.of<UserProvider>(context, listen: false);
-    _firstNameController =
-        TextEditingController(text: provider.firstName);
-    _lastNameController =
-        TextEditingController(text: provider.lastName);
-    _emailController =
-        TextEditingController(text: provider.email);
+    final provider = Provider.of<UserProvider>(context, listen: false);
+    _firstNameController = TextEditingController(text: provider.firstName);
+    _lastNameController = TextEditingController(text: provider.lastName);
+    _emailController = TextEditingController(text: provider.email);
   }
 
   @override
@@ -36,6 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
+  // ── LOGIC PRESERVED ──
   Future<void> _handleSave() async {
     final firstName = _firstNameController.text.trim();
     final lastName = _lastNameController.text.trim();
@@ -43,17 +90,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (firstName.isEmpty || lastName.isEmpty || email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please fill in all fields.'),
-            backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('Please fill in all fields.', style: _T.body.copyWith(color: Colors.white)),
+          backgroundColor: _T.primary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
       );
       return;
     }
 
     setState(() => _isLoading = true);
 
-    final provider =
-        Provider.of<UserProvider>(context, listen: false);
+    final provider = Provider.of<UserProvider>(context, listen: false);
     final success = await provider.updateProfile(
       firstName: firstName,
       lastName: lastName,
@@ -65,10 +114,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(success
-            ? 'Profile updated successfully!'
-            : 'Failed to update profile.'),
-        backgroundColor: success ? Colors.green : Colors.red,
+        content: Text(
+          success ? 'Profile updated successfully!' : 'Failed to update profile.',
+          style: _T.body.copyWith(color: Colors.white)
+        ),
+        backgroundColor: success ? const Color(0xFF16A34A) : _T.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
 
@@ -78,84 +130,122 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: _T.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: _T.bg,
         elevation: 0,
-        automaticallyImplyLeading: false,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF8B0000),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.arrow_back_ios_new,
-                color: Colors.white, size: 18),
+        scrolledUnderElevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 8.0),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _T.dark, size: 20),
+            onPressed: () => Navigator.pop(context),
           ),
-          onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Profile',
-            style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold)),
+        title: Text('Profile', style: _T.h2.copyWith(fontSize: 18, color: _T.textPrimary)),
+        centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
         child: Column(
           children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: const BoxDecoration(
-                  color: Colors.grey, shape: BoxShape.circle),
-              child: const Icon(Icons.camera_alt,
-                  color: Colors.white, size: 36),
+            // ✅ Modern Avatar Placeholder
+            Center(
+              child: Column(
+                children: [
+                  Stack(
+                    children: [
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: _T.surface,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: _T.border, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _T.dark.withOpacity(0.04),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.person_rounded, color: _T.textSecondary, size: 40),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: _T.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: _T.surface, width: 3),
+                          ),
+                          child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text('Set New Photo', style: _T.h2.copyWith(fontSize: 14)),
+                  const SizedBox(height: 4),
+                  Text('Update your profile information below.', style: _T.body.copyWith(fontSize: 12)),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-            const Text('Set New Photo',
-                style:
-                    TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 24),
+            const SizedBox(height: 36),
+
+            // ✅ Input Fields
+            Row(
+              children: [
+                Expanded(child: _editableField(_firstNameController, 'First Name')),
+                const SizedBox(width: 16),
+                Expanded(child: _editableField(_lastNameController, 'Last Name')),
+              ],
+            ),
+            const SizedBox(height: 20),
             _editableField(
-                _firstNameController, 'First name'),
-            const SizedBox(height: 8),
-            _editableField(_lastNameController, 'Last name'),
-            const Text(
-                'Enter your name and an optional profile photo',
-                style: TextStyle(
-                    color: Colors.grey, fontSize: 12)),
-            const SizedBox(height: 16),
-            _editableField(_emailController, 'Email',
-                keyboardType: TextInputType.emailAddress),
-            const Text('Enter your Email address',
-                style: TextStyle(
-                    color: Colors.grey, fontSize: 12)),
-            const SizedBox(height: 32),
+              _emailController, 
+              'Email Address',
+              keyboardType: TextInputType.emailAddress,
+              icon: Icons.email_rounded,
+            ),
+
+            const SizedBox(height: 48),
+
+            // ✅ Save Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleSave,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8B0000),
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 16),
+                  backgroundColor: _T.primary,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: _T.muted,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(30)),
+                    borderRadius: BorderRadius.circular(12), // Sleeker than rounded pill
+                  ),
                 ),
                 child: _isLoading
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2),
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                       )
-                    : const Text('Save edits',
+                    : const Text(
+                        'Save Changes',
                         style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16)),
+                          fontFamily: 'Poppins',
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
               ),
             ),
           ],
@@ -164,30 +254,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // ── REUSABLE TEXT FIELD WIDGET ──
   Widget _editableField(
-      TextEditingController controller, String label,
-      {TextInputType? keyboardType}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFF8B0000),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle:
-              const TextStyle(color: Colors.white70),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16, vertical: 14),
-          suffixIcon: const Icon(Icons.edit,
-              color: Colors.white, size: 16),
+    TextEditingController controller,
+    String label, {
+    TextInputType? keyboardType,
+    IconData? icon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: _T.label.copyWith(fontSize: 10, fontWeight: FontWeight.w600),
         ),
-      ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: _T.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _T.border),
+            boxShadow: [
+              BoxShadow(
+                color: _T.dark.withOpacity(0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              )
+            ],
+          ),
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            style: _T.body.copyWith(color: _T.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Enter $label',
+              hintStyle: _T.body.copyWith(color: _T.textSecondary.withOpacity(0.5)),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              suffixIcon: Icon(
+                icon ?? Icons.edit_rounded,
+                color: _T.textSecondary.withOpacity(0.4),
+                size: 16,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

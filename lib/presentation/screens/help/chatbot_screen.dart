@@ -1,20 +1,68 @@
+// ✅ PREMIUM REDESIGN — ALL LOGIC PRESERVED
+// Design: Minimalist Industrial SaaS · Poppins
+// Matches HomeScreen, PriceScreen, AlertsScreen, ProfileScreen & AreaChat Design System
+
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../config/api_keys.dart';
 
+// ─────────────────────────────────────────────
+//  DESIGN TOKENS (Shared across the app)
+// ─────────────────────────────────────────────
+class _T {
+  static const primary    = Color(0xFFAD2831);
+  static const dark       = Color(0xFF38040E);
+  static const accent     = Color(0xFF250902);
+  static const bg         = Color(0xFFF8F4F1);
+  static const surface    = Color(0xFFFFFFFF);
+  static const muted      = Color(0xFFF2EBE7);
+  static const textPrimary   = Color(0xFF1A0A0C);
+  static const textSecondary = Color(0xFF7A5C60);
+  static const border     = Color(0xFFEADDDA);
+
+  static const h1 = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+    color: textPrimary,
+    letterSpacing: -0.4,
+  );
+  static const h2 = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: textPrimary,
+    letterSpacing: -0.2,
+  );
+  static const label = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    color: textSecondary,
+    letterSpacing: 0.6,
+  );
+  static const body = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    color: textSecondary,
+  );
+}
+
+// ─────────────────────────────────────────────
+//  CHATBOT SCREEN
+// ─────────────────────────────────────────────
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({super.key});
 
   @override
-  State<ChatbotScreen> createState() =>
-      _ChatbotScreenState();
+  State<ChatbotScreen> createState() => _ChatbotScreenState();
 }
 
 class _ChatbotScreenState extends State<ChatbotScreen> {
   final _messageController = TextEditingController();
-  final ScrollController _scrollController =
-      ScrollController();
+  final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
   DateTime? _lastMessageTime;
 
@@ -47,14 +95,14 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
     if (text.isEmpty || _isTyping) return;
 
     final now = DateTime.now();
-    if (_lastMessageTime != null &&
-        now.difference(_lastMessageTime!).inSeconds < 2) {
+    if (_lastMessageTime != null && now.difference(_lastMessageTime!).inSeconds < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Please wait a moment before sending again.'),
-          duration: Duration(seconds: 1),
-          backgroundColor: Color(0xFF8B0000),
+        SnackBar(
+          content: Text('Please wait a moment before sending again.', style: _T.body.copyWith(color: Colors.white)),
+          duration: const Duration(seconds: 1),
+          backgroundColor: _T.primary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
       return;
@@ -77,10 +125,7 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
         'content': _systemPrompt,
       });
 
-      final history = _messages
-          .where((m) => m['text'] != text)
-          .take(10)
-          .toList();
+      final history = _messages.where((m) => m['text'] != text).take(10).toList();
 
       for (final m in history) {
         groqMessages.add({
@@ -94,9 +139,7 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
         'content': text,
       });
 
-      final url = Uri.parse(
-        'https://api.groq.com/openai/v1/chat/completions',
-      );
+      final url = Uri.parse('https://api.groq.com/openai/v1/chat/completions');
 
       final response = await http.post(
         url,
@@ -114,8 +157,7 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final reply = data['choices'][0]['message']
-            ['content'] as String;
+        final reply = data['choices'][0]['message']['content'] as String;
 
         if (mounted) {
           setState(() {
@@ -128,11 +170,11 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
           _scrollToBottom();
         }
       } else {
-        print('Groq error: ${response.statusCode} ${response.body}');
+        debugPrint('Groq error: ${response.statusCode} ${response.body}');
         _addErrorMessage();
       }
     } catch (e) {
-      print('Groq exception: $e');
+      debugPrint('Groq exception: $e');
       _addErrorMessage();
     }
   }
@@ -141,8 +183,7 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
     if (mounted) {
       setState(() {
         _messages.add({
-          'text':
-              'Sorry, I\'m having trouble connecting right now. Please try again. 🙏',
+          'text': 'Sorry, I\'m having trouble connecting right now. Please try again. 🙏',
           'isBot': true,
         });
         _isTyping = false;
@@ -181,303 +222,291 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F0EB),
+      backgroundColor: _T.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F0EB),
+        backgroundColor: _T.bg,
         elevation: 0,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-                color: const Color(0xFF8B0000),
-                borderRadius: BorderRadius.circular(8)),
-            child: const Icon(Icons.arrow_back_ios_new,
-                color: Colors.white, size: 16),
+        scrolledUnderElevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 8.0),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _T.dark, size: 20),
+            onPressed: () => Navigator.pop(context),
           ),
-          onPressed: () => Navigator.pop(context),
         ),
-        title: Row(children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: const BoxDecoration(
-              color: Color(0xFF8B0000),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.smart_toy,
-                color: Colors.white, size: 18),
-          ),
-          const SizedBox(width: 8),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('PetroMind AI',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15)),
-              Text('Powered by Groq AI',
-                  style:
-                      TextStyle(color: Colors.grey, fontSize: 10)),
-            ],
-          ),
-        ]),
-        actions: [
-          IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
+        title: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
-                  color: const Color(0xFF8B0000),
-                  borderRadius: BorderRadius.circular(8)),
-              child: const Icon(Icons.person,
-                  color: Colors.white, size: 20),
-            ),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF8B0000),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            children: [
-              // ── CHAT MESSAGES ──
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  itemCount:
-                      _messages.length + (_isTyping ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == _messages.length && _isTyping) {
-                      return Padding(
-                        padding:
-                            const EdgeInsets.only(bottom: 12),
-                        child: Row(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.end,
-                          children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle),
-                              child: const Icon(Icons.smart_toy,
-                                  color: Color(0xFF8B0000),
-                                  size: 22),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding:
-                                  const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12),
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.only(
-                                  topLeft:
-                                      Radius.circular(16),
-                                  topRight:
-                                      Radius.circular(16),
-                                  bottomRight:
-                                      Radius.circular(16),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _dot(0),
-                                  const SizedBox(width: 4),
-                                  _dot(1),
-                                  const SizedBox(width: 4),
-                                  _dot(2),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    final msg = _messages[index];
-                    final isBot = msg['isBot'] as bool;
-                    final isFirst = index == 0;
-
-                    return Padding(
-                      padding:
-                          const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.end,
-                        mainAxisAlignment: isBot
-                            ? MainAxisAlignment.start
-                            : MainAxisAlignment.end,
-                        children: [
-                          if (isBot) ...[
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle),
-                              child: const Icon(Icons.smart_toy,
-                                  color: Color(0xFF8B0000),
-                                  size: 22),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                          Container(
-                            constraints: BoxConstraints(
-                              maxWidth:
-                                  MediaQuery.of(context)
-                                          .size
-                                          .width *
-                                      0.60,
-                            ),
-                            padding:
-                                const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 10),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.only(
-                                topLeft:
-                                    const Radius.circular(16),
-                                topRight:
-                                    const Radius.circular(16),
-                                bottomLeft: Radius.circular(
-                                    isBot ? 0 : 16),
-                                bottomRight: Radius.circular(
-                                    isBot ? 16 : 0),
-                              ),
-                            ),
-                            child: isFirst
-                                ? Text.rich(TextSpan(
-                                    children: [
-                                      const TextSpan(
-                                        text: 'Hello! ',
-                                        style: TextStyle(
-                                            color: Color(
-                                                0xFF8B0000),
-                                            fontWeight:
-                                                FontWeight.bold),
-                                      ),
-                                      TextSpan(
-                                        text: msg['text']
-                                            .toString()
-                                            .replaceFirst(
-                                                'Hello! ', ''),
-                                        style: const TextStyle(
-                                            color:
-                                                Colors.black87),
-                                      ),
-                                    ],
-                                  ))
-                                : Text(
-                                    msg['text'].toString(),
-                                    style: const TextStyle(
-                                        color: Colors.black87,
-                                        fontSize: 13),
-                                  ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                color: _T.primary.withOpacity(0.12),
+                shape: BoxShape.circle,
+                border: Border.all(color: _T.primary.withOpacity(0.2)),
               ),
-
-              // Quick suggestion chips
-              if (_messages.length <= 2)
-                SizedBox(
-                  height: 36,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12),
-                    itemCount: _suggestions.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(width: 8),
-                    itemBuilder: (_, i) => GestureDetector(
-                      onTap: () {
-                        _messageController.text =
-                            _suggestions[i].replaceAll(
-                                RegExp(r'^[^\s]+\s'), '');
-                        _sendMessage();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white
-                              .withOpacity(0.15),
-                          borderRadius:
-                              BorderRadius.circular(20),
-                          border: Border.all(
-                              color: Colors.white
-                                  .withOpacity(0.4)),
+              child: const Icon(Icons.smart_toy_rounded, color: _T.primary, size: 16),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('PetroMind AI', style: _T.h2.copyWith(fontSize: 15)),
+                Text('Powered by Groq LLaMA', style: _T.label.copyWith(fontSize: 9)),
+              ],
+            ),
+          ],
+        ),
+      ),
+      body: Column(
+        children: [
+          // ── CHAT MESSAGES ──
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              physics: const BouncingScrollPhysics(),
+              itemCount: _messages.length + (_isTyping ? 1 : 0),
+              itemBuilder: (context, index) {
+                // ── TYPING INDICATOR ──
+                if (index == _messages.length && _isTyping) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: _T.primary.withOpacity(0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.smart_toy_rounded, color: _T.primary, size: 14),
                         ),
-                        child: Text(
-                          _suggestions[i],
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: _T.surface,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              topRight: Radius.circular(16),
+                              bottomLeft: Radius.circular(0),
+                              bottomRight: Radius.circular(16),
+                            ),
+                            border: Border.all(color: _T.border),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _T.dark.withOpacity(0.03),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              )
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _dot(0),
+                              const SizedBox(width: 4),
+                              _dot(1),
+                              const SizedBox(width: 4),
+                              _dot(2),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                // ── MESSAGE BUBBLE ──
+                final msg = _messages[index];
+                final isBot = msg['isBot'] as bool;
+                final isFirst = index == 0;
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: isBot ? MainAxisAlignment.start : MainAxisAlignment.end,
+                    children: [
+                      if (isBot) ...[
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: _T.primary.withOpacity(0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.smart_toy_rounded, color: _T.primary, size: 14),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      Flexible(
+                        child: Container(
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.75,
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isBot ? _T.surface : _T.primary,
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(16),
+                              topRight: const Radius.circular(16),
+                              bottomLeft: Radius.circular(isBot ? 0 : 16),
+                              bottomRight: Radius.circular(isBot ? 16 : 0),
+                            ),
+                            border: isBot ? Border.all(color: _T.border) : null,
+                            boxShadow: [
+                              BoxShadow(
+                                color: _T.dark.withOpacity(0.04),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              )
+                            ],
+                          ),
+                          child: isFirst
+                              ? Text.rich(TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: 'Hello! ',
+                                      style: _T.h2.copyWith(fontSize: 14, color: _T.primary),
+                                    ),
+                                    TextSpan(
+                                      text: msg['text'].toString().replaceFirst('Hello! ', ''),
+                                      style: _T.body.copyWith(fontSize: 13, color: _T.textPrimary),
+                                    ),
+                                  ],
+                                ))
+                              : Text(
+                                  msg['text'].toString(),
+                                  style: _T.body.copyWith(
+                                    fontSize: 13,
+                                    color: isBot ? _T.textPrimary : Colors.white,
+                                  ),
+                                ),
                         ),
                       ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // ── QUICK SUGGESTION CHIPS ──
+          if (_messages.length <= 2)
+            Container(
+              height: 40,
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _suggestions.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, i) => GestureDetector(
+                  onTap: () {
+                    _messageController.text = _suggestions[i].replaceAll(RegExp(r'^[^\s]+\s'), '');
+                    _sendMessage();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: _T.surface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: _T.border),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _T.dark.withOpacity(0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        )
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      _suggestions[i],
+                      style: _T.body.copyWith(fontSize: 11, color: _T.textPrimary),
                     ),
                   ),
                 ),
+              ),
+            ),
 
-              const SizedBox(height: 8),
-
-              // ── INPUT BAR ──
-              Container(
-                margin: const EdgeInsets.all(12),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Row(children: [
-                  Expanded(
+          // ── INPUT BAR ──
+          Container(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 12,
+              bottom: MediaQuery.of(context).padding.bottom + 12,
+            ),
+            decoration: BoxDecoration(
+              color: _T.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: _T.dark.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -4),
+                )
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: _T.bg,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: _T.border),
+                    ),
                     child: TextField(
                       controller: _messageController,
-                      decoration: const InputDecoration(
+                      style: _T.body.copyWith(color: _T.textPrimary),
+                      decoration: InputDecoration(
                         hintText: 'Type a message...',
-                        hintStyle: TextStyle(
-                            color: Colors.black38),
+                        hintStyle: _T.body.copyWith(color: _T.textSecondary.withOpacity(0.6)),
                         border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
                       onSubmitted: (_) => _sendMessage(),
                       textInputAction: TextInputAction.send,
                     ),
                   ),
-                  _isTyping
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Color(0xFF8B0000),
-                          ),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: _isTyping ? null : _sendMessage,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _isTyping ? _T.muted : _T.primary,
+                      shape: BoxShape.circle,
+                      boxShadow: _isTyping ? null : [
+                        BoxShadow(
+                          color: _T.primary.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
                         )
-                      : IconButton(
-                          icon: const Icon(Icons.send,
-                              color: Color(0xFF8B0000),
-                              size: 22),
-                          onPressed: _sendMessage,
-                        ),
-                ]),
-              ),
-            ],
+                      ],
+                    ),
+                    child: _isTyping
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -485,15 +514,14 @@ Respond in the same language the user writes in (Sinhala, Tamil, or English).
   Widget _dot(int index) {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.4, end: 1.0),
-      duration:
-          Duration(milliseconds: 400 + (index * 150)),
+      duration: Duration(milliseconds: 400 + (index * 150)),
       builder: (_, value, child) => Opacity(
         opacity: value,
         child: Container(
-          width: 7,
-          height: 7,
+          width: 6,
+          height: 6,
           decoration: const BoxDecoration(
-            color: Color(0xFF8B0000),
+            color: _T.textSecondary,
             shape: BoxShape.circle,
           ),
         ),

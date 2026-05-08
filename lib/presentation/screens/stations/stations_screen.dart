@@ -1,3 +1,7 @@
+// ✅ PREMIUM REDESIGN — ALL LOGIC PRESERVED
+// Design: Minimalist Industrial SaaS · Poppins
+// Matches HomeScreen, PriceScreen, AlertsScreen, ProfileScreen & Chat Screens
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
@@ -10,20 +14,77 @@ import 'station_detail_screen.dart';
 import '../profile/profile_screen.dart';
 import '../../../data/models/road_alert_model.dart';
 import '../../../data/services/road_alert_service.dart';
-import '../../widgets/report_alert_sheet.dart'; // ✅ FIXED
+import '../../widgets/report_alert_sheet.dart';
 
+// ─────────────────────────────────────────────
+//  DESIGN TOKENS (Shared across the app)
+// ─────────────────────────────────────────────
+class _T {
+  static const primary    = Color(0xFFAD2831);
+  static const dark       = Color(0xFF38040E);
+  static const accent     = Color(0xFF250902);
+  static const bg         = Color(0xFFF8F4F1);
+  static const surface    = Color(0xFFFFFFFF);
+  static const muted      = Color(0xFFF2EBE7);
+  static const textPrimary   = Color(0xFF1A0A0C);
+  static const textSecondary = Color(0xFF7A5C60);
+  static const border     = Color(0xFFEADDDA);
+
+  static const h1 = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+    color: textPrimary,
+    letterSpacing: -0.4,
+  );
+  static const h2 = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: textPrimary,
+    letterSpacing: -0.2,
+  );
+  static const label = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    color: textSecondary,
+    letterSpacing: 0.6,
+  );
+  static const body = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    color: textSecondary,
+  );
+
+  static BoxDecoration card({Color? color, bool hasBorder = true}) =>
+      BoxDecoration(
+        color: color ?? surface,
+        borderRadius: BorderRadius.circular(16),
+        border: hasBorder ? Border.all(color: border, width: 1) : null,
+        boxShadow: [
+          BoxShadow(
+            color: dark.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      );
+}
+
+// ─────────────────────────────────────────────
+//  STATIONS SCREEN
+// ─────────────────────────────────────────────
 class StationsScreen extends StatefulWidget {
   const StationsScreen({super.key});
 
   @override
-  State<StationsScreen> createState() =>
-      _StationsScreenState();
+  State<StationsScreen> createState() => _StationsScreenState();
 }
 
-class _StationsScreenState
-    extends State<StationsScreen> {
-  final TextEditingController _searchController =
-      TextEditingController();
+class _StationsScreenState extends State<StationsScreen> {
+  final TextEditingController _searchController = TextEditingController();
 
   double _currentLat = 7.4818;
   double _currentLng = 80.3609;
@@ -32,14 +93,11 @@ class _StationsScreenState
   List<Map<String, dynamic>> _nearbyStations = [];
 
   // ✅ Road alert fields
-  final RoadAlertService _alertService =
-      RoadAlertService();
-  StreamSubscription<List<RoadAlert>>?
-      _alertSubscription;
+  final RoadAlertService _alertService = RoadAlertService();
+  StreamSubscription<List<RoadAlert>>? _alertSubscription;
   List<RoadAlert> _activeAlerts = [];
 
-  static const String _mapId =
-      'petromind-leaflet-map';
+  static const String _mapId = 'petromind-leaflet-map';
   static bool _mapRegistered = false;
 
   @override
@@ -49,7 +107,7 @@ class _StationsScreenState
     _getCurrentLocation();
   }
 
-  // ✅ Start listening to nearby alerts from Firestore
+  // ── LOGIC PRESERVED ──
   void _startAlertListener() {
     _alertSubscription?.cancel();
     _alertSubscription = _alertService
@@ -65,12 +123,9 @@ class _StationsScreenState
     });
   }
 
-  // ✅ Add alert markers to Leaflet map
-  void _updateAlertMarkersOnMap(
-      List<RoadAlert> alerts) {
+  void _updateAlertMarkersOnMap(List<RoadAlert> alerts) {
     if (!kIsWeb) return;
 
-    // Clear existing alert markers
     js.context.callMethod('eval', ['''
       if (window._alertMarkers) {
         window._alertMarkers.forEach(function(m) {
@@ -80,7 +135,6 @@ class _StationsScreenState
       window._alertMarkers = [];
     ''']);
 
-    // Add new alert markers
     for (final alert in alerts) {
       final emoji = _alertEmoji(alert.type);
       final label = _alertLabel(alert.type);
@@ -144,8 +198,7 @@ class _StationsScreenState
   String _timeAgo(DateTime time) {
     final diff = DateTime.now().difference(time);
     if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60)
-      return '${diff.inMinutes} min ago';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
     return '${diff.inHours} hr ago';
   }
 
@@ -170,8 +223,7 @@ class _StationsScreenState
 
         container.append(mapDiv);
 
-        Future.delayed(
-            const Duration(milliseconds: 600), () {
+        Future.delayed(const Duration(milliseconds: 600), () {
           _initLeaflet();
         });
 
@@ -190,9 +242,11 @@ class _StationsScreenState
         if (!el) return false;
         try {
           var map = L.map(el, {
-            zoomControl: true,
+            zoomControl: false,
             attributionControl: false,
           }).setView([${_currentLat}, ${_currentLng}], 14);
+
+          L.control.zoom({ position: 'topright' }).addTo(map);
 
           L.tileLayer(
             'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -238,25 +292,20 @@ class _StationsScreenState
 
   Future<void> _getCurrentLocation() async {
     try {
-      LocationPermission permission =
-          await Geolocator.checkPermission();
+      LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        permission =
-            await Geolocator.requestPermission();
+        permission = await Geolocator.requestPermission();
       }
-      if (permission ==
-          LocationPermission.deniedForever) {
+      if (permission == LocationPermission.deniedForever) {
         if (mounted) {
           setState(() => _locationLoaded = true);
-          _loadNearbyStations(
-              _currentLat, _currentLng);
-          _startAlertListener(); // ✅
+          _loadNearbyStations(_currentLat, _currentLng);
+          _startAlertListener();
         }
         return;
       }
 
-      final position =
-          await Geolocator.getCurrentPosition(
+      final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
@@ -269,19 +318,18 @@ class _StationsScreenState
         _moveMapTo(_currentLat, _currentLng);
         _updateUserMarker(_currentLat, _currentLng);
         _loadNearbyStations(_currentLat, _currentLng);
-        _startAlertListener(); // ✅
+        _startAlertListener();
       }
     } catch (e) {
       if (mounted) {
         setState(() => _locationLoaded = true);
         _loadNearbyStations(_currentLat, _currentLng);
-        _startAlertListener(); // ✅
+        _startAlertListener();
       }
     }
   }
 
-  void _moveMapTo(double lat, double lng,
-      {int zoom = 14}) {
+  void _moveMapTo(double lat, double lng, {int zoom = 14}) {
     if (!kIsWeb) return;
     js.context.callMethod('eval', [
       'if(window._leafletMap){window._leafletMap.setView([$lat,$lng],$zoom);}'
@@ -295,16 +343,12 @@ class _StationsScreenState
     ]);
   }
 
-  Future<List<Map<String, dynamic>>> _callJsAsync(
-      String fn, List<dynamic> args) async {
-    final completer =
-        Completer<List<Map<String, dynamic>>>();
-    final callbackId =
-        'cb_${DateTime.now().millisecondsSinceEpoch}';
+  Future<List<Map<String, dynamic>>> _callJsAsync(String fn, List<dynamic> args) async {
+    final completer = Completer<List<Map<String, dynamic>>>();
+    final callbackId = 'cb_${DateTime.now().millisecondsSinceEpoch}';
     final errorId = 'err_$callbackId';
 
-    js.context[callbackId] =
-        js.allowInterop((dynamic result) {
+    js.context[callbackId] = js.allowInterop((dynamic result) {
       final List<Map<String, dynamic>> stations = [];
       try {
         final jsArray = result as js.JsArray;
@@ -325,8 +369,7 @@ class _StationsScreenState
             try { rating = (item['rating'] as num).toDouble(); } catch (_) {}
             try { placeId = item['placeId']?.toString() ?? 'unknown_$i'; } catch (_) {}
 
-            if (itemLat != _currentLat ||
-                itemLng != _currentLng) {
+            if (itemLat != _currentLat || itemLng != _currentLng) {
               stations.add({
                 'name': name,
                 'brand': _detectBrand(name),
@@ -344,28 +387,24 @@ class _StationsScreenState
           } catch (e) {}
         }
       } catch (e) {
-        print('❌ Parse error: $e');
+        debugPrint('❌ Parse error: $e');
       }
 
-      print('✅ Parsed ${stations.length} stations');
       if (!completer.isCompleted) {
         completer.complete(stations);
       }
       js.context.deleteProperty(callbackId);
     });
 
-    js.context[errorId] =
-        js.allowInterop((dynamic err) {
-      print('❌ JS error: $err');
+    js.context[errorId] = js.allowInterop((dynamic err) {
+      debugPrint('❌ JS error: $err');
       if (!completer.isCompleted) {
         completer.complete([]);
       }
       js.context.deleteProperty(errorId);
     });
 
-    final argStr = args
-        .map((a) => a is String ? '"$a"' : '$a')
-        .join(', ');
+    final argStr = args.map((a) => a is String ? '"$a"' : '$a').join(', ');
 
     js.context.callMethod('eval', ['''
       (async function() {
@@ -386,7 +425,7 @@ class _StationsScreenState
     return completer.future.timeout(
       const Duration(seconds: 25),
       onTimeout: () {
-        print('⏰ Station search timed out');
+        debugPrint('⏰ Station search timed out');
         if (!completer.isCompleted) {
           completer.complete([]);
         }
@@ -395,15 +434,12 @@ class _StationsScreenState
     );
   }
 
-  Future<void> _loadNearbyStations(
-      double lat, double lng) async {
+  Future<void> _loadNearbyStations(double lat, double lng) async {
     if (!kIsWeb) return;
     setState(() => _loadingStations = true);
 
     try {
-      final stations = await _callJsAsync(
-          'searchNearbyStations', [lat, lng]);
-      print('✅ Got ${stations.length} stations');
+      final stations = await _callJsAsync('searchNearbyStations', [lat, lng]);
       if (mounted) {
         setState(() {
           _nearbyStations = stations;
@@ -414,7 +450,7 @@ class _StationsScreenState
         }
       }
     } catch (e) {
-      print('❌ _loadNearbyStations error: $e');
+      debugPrint('❌ _loadNearbyStations error: $e');
       if (mounted) {
         setState(() => _loadingStations = false);
       }
@@ -425,29 +461,20 @@ class _StationsScreenState
     if (query.isEmpty) return;
     setState(() => _loadingStations = true);
     try {
-      final geocodeCompleter =
-          Completer<Map<String, double>>();
-      final cbId =
-          'geocb_${DateTime.now().millisecondsSinceEpoch}';
+      final geocodeCompleter = Completer<Map<String, double>>();
+      final cbId = 'geocb_${DateTime.now().millisecondsSinceEpoch}';
 
-      js.context[cbId] =
-          js.allowInterop((dynamic result) {
+      js.context[cbId] = js.allowInterop((dynamic result) {
         try {
           final jsObj = result as js.JsObject;
-          final lat =
-              (jsObj['lat'] as num).toDouble();
-          final lng =
-              (jsObj['lng'] as num).toDouble();
+          final lat = (jsObj['lat'] as num).toDouble();
+          final lng = (jsObj['lng'] as num).toDouble();
           if (!geocodeCompleter.isCompleted) {
-            geocodeCompleter
-                .complete({'lat': lat, 'lng': lng});
+            geocodeCompleter.complete({'lat': lat, 'lng': lng});
           }
         } catch (e) {
           if (!geocodeCompleter.isCompleted) {
-            geocodeCompleter.complete({
-              'lat': _currentLat,
-              'lng': _currentLng
-            });
+            geocodeCompleter.complete({'lat': _currentLat, 'lng': _currentLng});
           }
         }
         js.context.deleteProperty(cbId);
@@ -464,30 +491,28 @@ class _StationsScreenState
         })();
       ''']);
 
-      final coords = await geocodeCompleter.future
-          .timeout(
+      final coords = await geocodeCompleter.future.timeout(
         const Duration(seconds: 10),
-        onTimeout: () =>
-            {'lat': _currentLat, 'lng': _currentLng},
+        onTimeout: () => {'lat': _currentLat, 'lng': _currentLng},
       );
 
       _moveMapTo(coords['lat']!, coords['lng']!);
-      await _loadNearbyStations(
-          coords['lat']!, coords['lng']!);
+      await _loadNearbyStations(coords['lat']!, coords['lng']!);
     } catch (e) {
       if (mounted) {
         setState(() => _loadingStations = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  'Location not found. Try again.')),
+          SnackBar(
+            content: Text('Location not found. Try again.', style: _T.body.copyWith(color: Colors.white)),
+            backgroundColor: _T.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
   }
 
-  void _addStationMarkers(
-      List<Map<String, dynamic>> stations) {
+  void _addStationMarkers(List<Map<String, dynamic>> stations) {
     if (!kIsWeb) return;
 
     js.context.callMethod('eval', ['''
@@ -509,10 +534,8 @@ class _StationsScreenState
           .replaceAll("'", "\\'")
           .replaceAll('"', '\\"')
           .replaceAll('\n', ' ');
-      final dist = _getDistanceText(
-          s['lat'] as double, s['lng'] as double);
-      final color =
-          _getBrandColorHex(s['brand'] as String);
+      final dist = _getDistanceText(s['lat'] as double, s['lng'] as double);
+      final color = _getBrandColorHex(s['brand'] as String);
 
       js.context.callMethod('eval', ['''
         (function() {
@@ -526,7 +549,7 @@ class _StationsScreenState
           var marker = L.marker([$lat, $lng],
               { icon: icon })
             .addTo(window._leafletMap)
-            .bindPopup("<b>$name</b><br>$dist");
+            .bindPopup("<b style='font-family:Poppins'>$name</b><br><span style='font-family:Poppins;color:#666'>$dist</span>");
           window._leafletMarkers.push(marker);
         })();
       ''']);
@@ -541,7 +564,7 @@ class _StationsScreenState
       case 'IOC': return '#1565C0';
       case 'CEYPETCO': return '#6A1B9A';
       case 'CALTEX': return '#1976D2';
-      default: return '#8B0000';
+      default: return '#AD2831'; // Use _T.primary
     }
   }
 
@@ -574,7 +597,7 @@ class _StationsScreenState
             { padding: [60, 60] }
           );
           var destIcon = L.divIcon({
-            html: '<div style="background:#8B0000;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.5)"></div>',
+            html: '<div style="background:#AD2831;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.5)"></div>',
             iconSize: [18, 18],
             iconAnchor: [9, 9],
             className: ""
@@ -590,25 +613,20 @@ class _StationsScreenState
     ''']);
   }
 
-  void _showStationInfoPanel(
-      Map<String, dynamic> station) {
-    final dist = _getDistanceText(
-        station['lat'] as double,
-        station['lng'] as double);
-    final time = _getTimeEstimate(
-        station['lat'] as double,
-        station['lng'] as double);
+  void _showStationInfoPanel(Map<String, dynamic> station) {
+    final dist = _getDistanceText(station['lat'] as double, station['lng'] as double);
+    final time = _getTimeEstimate(station['lat'] as double, station['lng'] as double);
+    final brandColor = _getBrandColor(station['brand'] as String);
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(20)),
-      ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-            20, 12, 20, 20),
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        decoration: const BoxDecoration(
+          color: _T.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -616,44 +634,32 @@ class _StationsScreenState
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius:
-                    BorderRadius.circular(2),
+                color: _T.border,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 16),
             Row(children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: _getBrandColor(
-                          station['brand'] as String)
-                      .withValues(alpha: 0.1),
+                  color: brandColor.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                    Icons.local_gas_station,
-                    color: _getBrandColor(
-                        station['brand'] as String),
-                    size: 28),
+                child: Icon(Icons.local_gas_station_rounded, color: brandColor, size: 28),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       station['name'] as String,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15),
+                      style: _T.h2.copyWith(fontSize: 16),
                     ),
                     Text(
                       station['address'] as String,
-                      style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12),
+                      style: _T.body.copyWith(fontSize: 12),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -661,123 +667,75 @@ class _StationsScreenState
                 ),
               ),
             ]),
-            const SizedBox(height: 14),
-            Row(children: [
-              _infoChipDark(
-                  Icons.directions_car, dist),
-              const SizedBox(width: 8),
-              _infoChipDark(
-                  Icons.access_time, time),
-            ]),
-            const SizedBox(height: 10),
-            Row(children: [
-              _fuelChip('Petrol', Colors.green),
-              _fuelChip('Diesel', Colors.blue),
-            ]),
             const SizedBox(height: 16),
+            Row(children: [
+              _infoChipDark(Icons.directions_car_rounded, dist),
+              const SizedBox(width: 8),
+              _infoChipDark(Icons.access_time_rounded, time),
+            ]),
+            const SizedBox(height: 12),
+            Row(children: [
+              _fuelChip('Petrol', const Color(0xFF16A34A)),
+              _fuelChip('Diesel', const Color(0xFF2563EB)),
+              if (station['hasOctane98'] == true) _fuelChip('Super', const Color(0xFFF59E0B)),
+            ]),
+            const SizedBox(height: 20),
             Row(children: [
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(
-                        color: Color(0xFF8B0000)),
-                    padding:
-                        const EdgeInsets.symmetric(
-                            vertical: 13),
-                    shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(
-                                10)),
+                    side: const BorderSide(color: _T.primary, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  icon: const Icon(
-                      Icons.info_outline,
-                      color: Color(0xFF8B0000),
-                      size: 18),
-                  label: const Text('Details',
-                      style: TextStyle(
-                          color: Color(0xFF8B0000),
-                          fontWeight:
-                              FontWeight.bold)),
+                  icon: const Icon(Icons.info_outline_rounded, color: _T.primary, size: 18),
+                  label: const Text('Details', style: TextStyle(color: _T.primary, fontWeight: FontWeight.w600)),
                   onPressed: () {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) =>
-                            StationDetailScreen(
-                          stationName:
-                              station['name']
-                                  as String,
-                          brand: station['brand']
-                                  as String? ??
-                              'FUEL',
-                          address:
-                              station['address']
-                                  as String,
+                        builder: (_) => StationDetailScreen(
+                          stationName: station['name'] as String,
+                          brand: station['brand'] as String? ?? 'FUEL',
+                          address: station['address'] as String,
                           distance: dist,
                           time: time,
-                          lat: station['lat']
-                              as double,
-                          lng: station['lng']
-                              as double,
+                          lat: station['lat'] as double,
+                          lng: station['lng'] as double,
                           userLat: _currentLat,
                           userLng: _currentLng,
-                          rating: station['rating']
-                              as double,
-                          isOpen: station['isOpen']
-                              as bool?,
-                          hasPetrol:
-                              station['hasPetrol']
-                                      as bool? ??
-                                  true,
-                          hasDiesel:
-                              station['hasDiesel']
-                                      as bool? ??
-                                  true,
-                          hasOctane98: station[
-                                      'hasOctane98']
-                                  as bool? ??
-                              false,
+                          rating: station['rating'] as double,
+                          isOpen: station['isOpen'] as bool?,
+                          hasPetrol: station['hasPetrol'] as bool? ?? true,
+                          hasDiesel: station['hasDiesel'] as bool? ?? true,
+                          hasOctane98: station['hasOctane98'] as bool? ?? false,
                         ),
                       ),
                     );
                   },
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        const Color(0xFF8B0000),
-                    padding:
-                        const EdgeInsets.symmetric(
-                            vertical: 13),
-                    shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(
-                                10)),
+                    backgroundColor: _T.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  icon: const Icon(
-                      Icons.navigation,
-                      color: Colors.white,
-                      size: 18),
-                  label: const Text('Navigate',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontWeight:
-                              FontWeight.bold)),
+                  icon: const Icon(Icons.navigation_rounded, color: Colors.white, size: 18),
+                  label: const Text('Navigate', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                   onPressed: () {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(
+                    ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                            '🗺️ Route to ${station['name']} shown on map!'),
-                        duration: const Duration(
-                            seconds: 2),
-                        backgroundColor:
-                            const Color(0xFF8B0000),
+                        content: Text('🗺️ Route to ${station['name']} shown on map!', style: _T.body.copyWith(color: Colors.white)),
+                        duration: const Duration(seconds: 2),
+                        backgroundColor: _T.primary,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     );
                   },
@@ -790,32 +748,21 @@ class _StationsScreenState
     );
   }
 
-  Widget _infoChipDark(
-      IconData icon, String label) {
+  Widget _infoChipDark(IconData icon, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF8B0000)
-            .withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-            color: const Color(0xFF8B0000)
-                .withValues(alpha: 0.3)),
+        color: _T.muted,
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon,
-                color: const Color(0xFF8B0000),
-                size: 14),
-            const SizedBox(width: 4),
-            Text(label,
-                style: const TextStyle(
-                    color: Color(0xFF8B0000),
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold)),
-          ]),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: _T.textSecondary, size: 14),
+          const SizedBox(width: 4),
+          Text(label, style: _T.h2.copyWith(fontSize: 11, color: _T.textSecondary)),
+        ],
+      ),
     );
   }
 
@@ -830,25 +777,20 @@ class _StationsScreenState
     return 'FUEL';
   }
 
-  String _getDistanceText(
-      double sLat, double sLng) {
-    final meters = Geolocator.distanceBetween(
-        _currentLat, _currentLng, sLat, sLng);
+  String _getDistanceText(double sLat, double sLng) {
+    final meters = Geolocator.distanceBetween(_currentLat, _currentLng, sLat, sLng);
     return '${(meters / 1000).toStringAsFixed(1)} km';
   }
 
-  String _getTimeEstimate(
-      double sLat, double sLng) {
-    final meters = Geolocator.distanceBetween(
-        _currentLat, _currentLng, sLat, sLng);
-    final minutes =
-        (meters / 1000 / 30 * 60).round();
+  String _getTimeEstimate(double sLat, double sLng) {
+    final meters = Geolocator.distanceBetween(_currentLat, _currentLng, sLat, sLng);
+    final minutes = (meters / 1000 / 30 * 60).round();
     return minutes < 1 ? '1 min' : '$minutes min';
   }
 
   @override
   void dispose() {
-    _alertSubscription?.cancel(); // ✅
+    _alertSubscription?.cancel();
     _searchController.dispose();
     if (kIsWeb) {
       js.context.callMethod('eval', ['''
@@ -869,83 +811,77 @@ class _StationsScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: _T.bg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _T.bg,
         elevation: 0,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF8B0000),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-                Icons.arrow_back_ios_new,
-                color: Colors.white,
-                size: 16),
+        scrolledUnderElevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 8.0),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _T.dark, size: 20),
+            onPressed: () => Navigator.pop(context),
           ),
-          onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Stations',
-            style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold)),
+        title: Text('Stations', style: _T.h2.copyWith(fontSize: 18, color: _T.textPrimary)),
+        centerTitle: true,
         actions: [
           // ✅ Alert count badge
           if (_activeAlerts.isNotEmpty)
             Padding(
-              padding:
-                  const EdgeInsets.only(right: 4),
+              padding: const EdgeInsets.only(right: 8),
               child: Stack(
+                alignment: Alignment.center,
                 children: [
                   IconButton(
-                    icon: const Icon(
-                        Icons.warning_amber,
-                        color: Color(0xFF8B0000)),
-                    onPressed: () =>
-                        _showAlertsList(context),
+                    icon: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 18),
+                    ),
+                    onPressed: () => _showAlertsList(context),
                     tooltip: 'Road Alerts',
                   ),
                   Positioned(
-                    right: 6,
+                    right: 4,
                     top: 6,
                     child: Container(
-                      padding:
-                          const EdgeInsets.all(3),
-                      decoration:
-                          const BoxDecoration(
-                        color: Colors.red,
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFDC2626),
                         shape: BoxShape.circle,
                       ),
                       child: Text(
                         '${_activeAlerts.length}',
                         style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight:
-                                FontWeight.bold),
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-          IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                  color: const Color(0xFF8B0000),
-                  borderRadius:
-                      BorderRadius.circular(8)),
-              child: const Icon(Icons.person,
-                  color: Colors.white, size: 20),
-            ),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) =>
-                      const ProfileScreen()),
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _T.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.person_rounded, color: _T.primary, size: 20),
+              ),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              ),
             ),
           ),
         ],
@@ -954,103 +890,68 @@ class _StationsScreenState
         children: [
           if (kIsWeb)
             Positioned.fill(
-              child: HtmlElementView(
-                  viewType: _mapId),
+              child: HtmlElementView(viewType: _mapId),
             )
           else
-            const Positioned.fill(
-              child: Center(
-                  child: Text(
-                      'Map available on web only')),
+            Positioned.fill(
+              child: Center(child: Text('Map available on web only', style: _T.body)),
             ),
 
           // ── SEARCH BAR ──
           Positioned(
-            top: 12,
-            left: 12,
-            right: 12,
+            top: 16,
+            left: 16,
+            right: 16,
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius:
-                    BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black
-                        .withValues(alpha: 0.1),
-                    blurRadius: 8,
-                  )
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: _T.card(),
+              child: Row(
+                children: [
+                  const Icon(Icons.search_rounded, color: _T.textSecondary, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      style: _T.body.copyWith(color: _T.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'Search city or location...',
+                        border: InputBorder.none,
+                        hintStyle: _T.body.copyWith(color: _T.textSecondary.withOpacity(0.6)),
+                      ),
+                      onSubmitted: _searchLocation,
+                      textInputAction: TextInputAction.search,
+                    ),
+                  ),
+                  if (_loadingStations)
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: _T.primary),
+                    )
+                  else
+                    IconButton(
+                      icon: const Icon(Icons.my_location_rounded, color: _T.primary, size: 20),
+                      onPressed: _getCurrentLocation,
+                      tooltip: 'Go to my location',
+                    ),
                 ],
               ),
-              child: Row(children: [
-                const Icon(Icons.search,
-                    color: Colors.grey),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration:
-                        const InputDecoration(
-                      hintText:
-                          'Search city or location...',
-                      border: InputBorder.none,
-                      hintStyle: TextStyle(
-                          color: Colors.grey),
-                    ),
-                    onSubmitted: _searchLocation,
-                    textInputAction:
-                        TextInputAction.search,
-                  ),
-                ),
-                if (_loadingStations)
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child:
-                        CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Color(0xFF8B0000),
-                    ),
-                  )
-                else
-                  IconButton(
-                    icon: const Icon(
-                        Icons.my_location,
-                        color: Color(0xFF8B0000),
-                        size: 22),
-                    onPressed: _getCurrentLocation,
-                    tooltip: 'Go to my location',
-                  ),
-              ]),
             ),
           ),
 
           // ── LOADING OVERLAY ──
           if (!_locationLoaded)
             Container(
-              color: Colors.white
-                  .withValues(alpha: 0.9),
-              child: const Center(
+              color: _T.bg.withOpacity(0.9),
+              child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(
-                        color: Color(0xFF8B0000)),
-                    SizedBox(height: 12),
-                    Text(
-                        'Getting your location...',
-                        style: TextStyle(
-                            fontWeight:
-                                FontWeight.bold,
-                            fontSize: 16)),
-                    SizedBox(height: 4),
-                    Text(
-                        'Please allow location access',
-                        style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 13)),
+                    const CircularProgressIndicator(color: _T.primary),
+                    const SizedBox(height: 16),
+                    Text('Locating you...', style: _T.h2),
+                    const SizedBox(height: 4),
+                    Text('Please allow location access', style: _T.body.copyWith(fontSize: 12)),
                   ],
                 ),
               ),
@@ -1058,9 +959,9 @@ class _StationsScreenState
 
           // ── BOTTOM BUTTONS ──
           Positioned(
-            bottom: 20,
-            left: 12,
-            right: 12,
+            bottom: MediaQuery.of(context).padding.bottom + 20,
+            left: 16,
+            right: 16,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1069,8 +970,7 @@ class _StationsScreenState
                   onTap: () => showModalBottomSheet(
                     context: context,
                     isScrollControlled: true,
-                    backgroundColor:
-                        Colors.transparent,
+                    backgroundColor: Colors.transparent,
                     builder: (_) => ReportAlertSheet(
                       userLat: _currentLat,
                       userLng: _currentLng,
@@ -1078,43 +978,31 @@ class _StationsScreenState
                   ),
                   child: Container(
                     width: double.infinity,
-                    padding:
-                        const EdgeInsets.symmetric(
-                            vertical: 12),
-                    margin: const EdgeInsets.only(
-                        bottom: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius:
-                          BorderRadius.circular(12),
-                      border: Border.all(
-                          color: const Color(
-                              0xFF8B0000),
-                          width: 1.5),
+                      color: _T.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _T.border),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black
-                              .withValues(alpha: 0.1),
-                          blurRadius: 6,
+                          color: _T.dark.withOpacity(0.04),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
                         )
                       ],
                     ),
-                    child: const Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.warning_amber,
-                            color:
-                                Color(0xFF8B0000),
-                            size: 18),
-                        SizedBox(width: 8),
+                        const Icon(Icons.add_alert_rounded, color: _T.primary, size: 18),
+                        const SizedBox(width: 8),
                         Text(
                           'Report Road Alert',
                           style: TextStyle(
-                            color:
-                                Color(0xFF8B0000),
-                            fontWeight:
-                                FontWeight.bold,
+                            fontFamily: 'Poppins',
+                            color: _T.primary,
+                            fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
                         ),
@@ -1124,40 +1012,39 @@ class _StationsScreenState
                 ),
 
                 // View Stations button
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        const Color(0xFF8B0000),
-                    disabledBackgroundColor:
-                        Colors.grey[400],
-                    minimumSize: const Size(
-                        double.infinity, 50),
-                    padding:
-                        const EdgeInsets.symmetric(
-                            vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(
-                                12)),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _T.primary.withOpacity(0.25),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      )
+                    ],
                   ),
-                  icon: const Icon(
-                      Icons.local_gas_station,
-                      color: Colors.white),
-                  label: Text(
-                    _loadingStations
-                        ? 'Searching stations...'
-                        : _nearbyStations.isEmpty
-                            ? 'No stations found nearby'
-                            : 'View ${_nearbyStations.length} Nearby Stations',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold),
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _T.primary,
+                      disabledBackgroundColor: _T.muted,
+                      elevation: 0,
+                      minimumSize: const Size(double.infinity, 50),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.format_list_bulleted_rounded, color: Colors.white, size: 18),
+                    label: Text(
+                      _loadingStations
+                          ? 'Searching stations...'
+                          : _nearbyStations.isEmpty
+                              ? 'No stations found nearby'
+                              : 'View ${_nearbyStations.length} Nearby Stations',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                    onPressed: (_loadingStations || _nearbyStations.isEmpty)
+                        ? null
+                        : () => _showStationList(context),
                   ),
-                  onPressed: (_loadingStations ||
-                          _nearbyStations.isEmpty)
-                      ? null
-                      : () =>
-                          _showStationList(context),
                 ),
               ],
             ),
@@ -1171,50 +1058,65 @@ class _StationsScreenState
   void _showAlertsList(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(20)),
-      ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(20),
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: _T.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '⚠️ Active Road Alerts Nearby',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            ..._activeAlerts.map((alert) {
-              return ListTile(
-                leading: Text(
-                    _alertEmoji(alert.type),
-                    style: const TextStyle(
-                        fontSize: 24)),
-                title: Text(
-                    _alertLabel(alert.type),
-                    style: const TextStyle(
-                        fontWeight:
-                            FontWeight.bold)),
-                subtitle: Text(
-                  '${_timeAgo(alert.reportedAt)} · ${alert.upvotes} confirmations'
-                  '${alert.description != null ? '\n${alert.description}' : ''}',
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 24),
                 ),
-                trailing: TextButton(
-                  onPressed: () {
-                    _alertService
-                        .upvoteAlert(alert.id);
-                    Navigator.pop(context);
-                  },
-                  child: const Text('👍 Confirm'),
+                const SizedBox(width: 16),
+                Text('Active Road Alerts', style: _T.h1.copyWith(fontSize: 18)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ..._activeAlerts.map((alert) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(color: _T.border),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: Text(_alertEmoji(alert.type), style: const TextStyle(fontSize: 24)),
+                  title: Text(_alertLabel(alert.type), style: _T.h2.copyWith(fontSize: 14)),
+                  subtitle: Text(
+                    '${_timeAgo(alert.reportedAt)} · ${alert.upvotes} confirmations'
+                    '${alert.description != null ? '\n${alert.description}' : ''}',
+                    style: _T.body.copyWith(fontSize: 12),
+                  ),
+                  trailing: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      backgroundColor: const Color(0xFF16A34A).withOpacity(0.1),
+                      foregroundColor: const Color(0xFF16A34A),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    icon: const Icon(Icons.thumb_up_rounded, size: 14),
+                    label: const Text('Confirm', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                    onPressed: () {
+                      _alertService.upvoteAlert(alert.id);
+                      Navigator.pop(context);
+                    },
+                  ),
                 ),
               );
             }),
+            SizedBox(height: MediaQuery.of(context).padding.bottom),
           ],
         ),
       ),
@@ -1222,22 +1124,12 @@ class _StationsScreenState
   }
 
   void _showStationList(BuildContext context) {
-    final sorted =
-        List<Map<String, dynamic>>.from(
-            _nearbyStations)
-          ..sort((a, b) {
-            final dA = Geolocator.distanceBetween(
-                _currentLat,
-                _currentLng,
-                a['lat'] as double,
-                a['lng'] as double);
-            final dB = Geolocator.distanceBetween(
-                _currentLat,
-                _currentLng,
-                b['lat'] as double,
-                b['lng'] as double);
-            return dA.compareTo(dB);
-          });
+    final sorted = List<Map<String, dynamic>>.from(_nearbyStations)
+      ..sort((a, b) {
+        final dA = Geolocator.distanceBetween(_currentLat, _currentLng, a['lat'] as double, a['lng'] as double);
+        final dB = Geolocator.distanceBetween(_currentLat, _currentLng, b['lat'] as double, b['lng'] as double);
+        return dA.compareTo(dB);
+      });
 
     Navigator.push(
       context,
@@ -1248,12 +1140,8 @@ class _StationsScreenState
           currentLng: _currentLng,
           onStationTap: (station) {
             Navigator.pop(context);
-            _drawRouteOnMap(
-                station['lat'] as double,
-                station['lng'] as double);
-            Future.delayed(
-                const Duration(
-                    milliseconds: 300), () {
+            _drawRouteOnMap(station['lat'] as double, station['lng'] as double);
+            Future.delayed(const Duration(milliseconds: 300), () {
               if (mounted) {
                 _showStationInfoPanel(station);
               }
@@ -1266,21 +1154,21 @@ class _StationsScreenState
 
   Widget _fuelChip(String label, Color color) {
     return Container(
-      margin: const EdgeInsets.only(right: 4),
-      padding: const EdgeInsets.symmetric(
-          horizontal: 6, vertical: 2),
+      margin: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-            color: color.withValues(alpha: 0.4)),
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 9,
+          fontFamily: 'Poppins',
+          fontSize: 10,
           color: color,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
         ),
       ),
     );
@@ -1288,12 +1176,12 @@ class _StationsScreenState
 
   Color _getBrandColor(String brand) {
     switch (brand) {
-      case 'SINOPEC': return Colors.red;
-      case 'SHELL': return Colors.orange[800]!;
-      case 'IOC': return Colors.blue[800]!;
-      case 'CEYPETCO': return Colors.purple[700]!;
-      case 'CALTEX': return Colors.blue[600]!;
-      default: return Colors.green[700]!;
+      case 'SINOPEC': return const Color(0xFFC62828);
+      case 'SHELL': return const Color(0xFFE65100);
+      case 'IOC': return const Color(0xFF1565C0);
+      case 'CEYPETCO': return const Color(0xFF6A1B9A);
+      case 'CALTEX': return const Color(0xFF1976D2);
+      default: return const Color(0xFF2E7D32); // Laugfs / Default
     }
   }
 }
@@ -1303,8 +1191,7 @@ class _StationListPage extends StatelessWidget {
   final List<Map<String, dynamic>> stations;
   final double currentLat;
   final double currentLng;
-  final void Function(Map<String, dynamic>)
-      onStationTap;
+  final void Function(Map<String, dynamic>) onStationTap;
 
   const _StationListPage({
     required this.stations,
@@ -1313,50 +1200,45 @@ class _StationListPage extends StatelessWidget {
     required this.onStationTap,
   });
 
-  String _getDistanceText(
-      double sLat, double sLng) {
-    final meters = Geolocator.distanceBetween(
-        currentLat, currentLng, sLat, sLng);
+  String _getDistanceText(double sLat, double sLng) {
+    final meters = Geolocator.distanceBetween(currentLat, currentLng, sLat, sLng);
     return '${(meters / 1000).toStringAsFixed(1)} km';
   }
 
-  String _getTimeEstimate(
-      double sLat, double sLng) {
-    final meters = Geolocator.distanceBetween(
-        currentLat, currentLng, sLat, sLng);
-    final minutes =
-        (meters / 1000 / 30 * 60).round();
+  String _getTimeEstimate(double sLat, double sLng) {
+    final meters = Geolocator.distanceBetween(currentLat, currentLng, sLat, sLng);
+    final minutes = (meters / 1000 / 30 * 60).round();
     return minutes < 1 ? '1 min' : '$minutes min';
   }
 
   Color _getBrandColor(String brand) {
     switch (brand) {
-      case 'SINOPEC': return Colors.red;
-      case 'SHELL': return Colors.orange[800]!;
-      case 'IOC': return Colors.blue[800]!;
-      case 'CEYPETCO': return Colors.purple[700]!;
-      case 'CALTEX': return Colors.blue[600]!;
-      default: return Colors.green[700]!;
+      case 'SINOPEC': return const Color(0xFFC62828);
+      case 'SHELL': return const Color(0xFFE65100);
+      case 'IOC': return const Color(0xFF1565C0);
+      case 'CEYPETCO': return const Color(0xFF6A1B9A);
+      case 'CALTEX': return const Color(0xFF1976D2);
+      default: return const Color(0xFF2E7D32);
     }
   }
 
   Widget _fuelChip(String label, Color color) {
     return Container(
-      margin: const EdgeInsets.only(right: 4),
-      padding: const EdgeInsets.symmetric(
-          horizontal: 6, vertical: 2),
+      margin: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-            color: color.withValues(alpha: 0.4)),
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Text(
         label,
         style: TextStyle(
+          fontFamily: 'Poppins',
           fontSize: 9,
           color: color,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
         ),
       ),
     );
@@ -1365,168 +1247,111 @@ class _StationListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F0EB),
+      backgroundColor: _T.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF8B0000),
+        backgroundColor: _T.bg,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-              Icons.arrow_back_ios_new,
-              color: Colors.white,
-              size: 16),
-          onPressed: () => Navigator.pop(context),
+        scrolledUnderElevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 8.0),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _T.dark, size: 20),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
-        title: Text(
-          '${stations.length} Nearby Stations',
-          style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold),
-        ),
+        title: Text('${stations.length} Nearby Stations', style: _T.h2.copyWith(fontSize: 16)),
+        centerTitle: true,
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(12),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        physics: const BouncingScrollPhysics(),
         itemCount: stations.length,
-        separatorBuilder: (_, __) =>
-            const SizedBox(height: 8),
         itemBuilder: (_, i) {
           final s = stations[i];
-          final dist = _getDistanceText(
-              s['lat'] as double,
-              s['lng'] as double);
-          final time = _getTimeEstimate(
-              s['lat'] as double,
-              s['lng'] as double);
+          final dist = _getDistanceText(s['lat'] as double, s['lng'] as double);
+          final time = _getTimeEstimate(s['lat'] as double, s['lng'] as double);
           final isOpen = s['isOpen'] as bool?;
 
           return GestureDetector(
             onTap: () => onStationTap(s),
             child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius:
-                    BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black
-                        .withValues(alpha: 0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  )
-                ],
-              ),
-              child: Row(children: [
-                Container(
-                  padding:
-                      const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: _getBrandColor(
-                            s['brand'] as String)
-                        .withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: _T.card(),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _getBrandColor(s['brand'] as String).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.local_gas_station_rounded,
+                      color: _getBrandColor(s['brand'] as String),
+                      size: 24,
+                    ),
                   ),
-                  child: Icon(
-                      Icons.local_gas_station,
-                      color: _getBrandColor(
-                          s['brand'] as String),
-                      size: 22),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          s['name'] as String,
+                          style: _T.h2.copyWith(fontSize: 14),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          s['address'] as String,
+                          style: _T.body.copyWith(fontSize: 11),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 0,
+                          runSpacing: 6,
+                          children: [
+                            _fuelChip('Petrol', const Color(0xFF16A34A)),
+                            _fuelChip('Diesel', const Color(0xFF2563EB)),
+                            if (s['hasOctane98'] == true) _fuelChip('Super', const Color(0xFFF59E0B)),
+                            if (isOpen != null)
+                              _fuelChip(
+                                isOpen ? 'Open' : 'Closed',
+                                isOpen ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        s['name'] as String,
-                        style: const TextStyle(
-                            fontWeight:
-                                FontWeight.bold,
-                            fontSize: 13),
+                      Text(dist, style: _T.h2.copyWith(fontSize: 13, color: _T.primary)),
+                      Text(time, style: _T.label.copyWith(fontSize: 10)),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _T.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.navigation_rounded, color: _T.primary, size: 12),
+                            const SizedBox(width: 4),
+                            Text('Go', style: _T.label.copyWith(color: _T.primary, fontWeight: FontWeight.bold, fontSize: 10)),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        s['address'] as String,
-                        style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 11),
-                        maxLines: 1,
-                        overflow:
-                            TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Row(children: [
-                        _fuelChip('Petrol',
-                            Colors.green),
-                        _fuelChip(
-                            'Diesel', Colors.blue),
-                        if (s['hasOctane98'] == true)
-                          _fuelChip('Super',
-                              Colors.orange),
-                        if (isOpen != null) ...[
-                          const SizedBox(width: 2),
-                          _fuelChip(
-                            isOpen
-                                ? 'Open'
-                                : 'Closed',
-                            isOpen
-                                ? Colors.green
-                                : Colors.red,
-                          ),
-                        ],
-                      ]),
                     ],
                   ),
-                ),
-                Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.end,
-                  children: [
-                    Text(dist,
-                        style: const TextStyle(
-                            color:
-                                Color(0xFF8B0000),
-                            fontSize: 12,
-                            fontWeight:
-                                FontWeight.bold)),
-                    Text(time,
-                        style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 11)),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding:
-                          const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4),
-                      decoration: BoxDecoration(
-                        color:
-                            const Color(0xFF8B0000),
-                        borderRadius:
-                            BorderRadius.circular(8),
-                      ),
-                      child: const Row(
-                        mainAxisSize:
-                            MainAxisSize.min,
-                        children: [
-                          Icon(Icons.navigation,
-                              color: Colors.white,
-                              size: 12),
-                          SizedBox(width: 3),
-                          Text('Go',
-                              style: TextStyle(
-                                  color:
-                                      Colors.white,
-                                  fontSize: 11,
-                                  fontWeight:
-                                      FontWeight
-                                          .bold)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ]),
+                ],
+              ),
             ),
           );
         },

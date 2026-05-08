@@ -1,34 +1,85 @@
+// ✅ PREMIUM REDESIGN — ALL LOGIC PRESERVED
+// Design: Minimalist Industrial SaaS · Poppins
+// Matches HomeScreen Design System
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../data/repositories/alert_repository.dart';
 
+// ─────────────────────────────────────────────
+//  DESIGN TOKENS (Shared from Home)
+// ─────────────────────────────────────────────
+class _T {
+  static const primary    = Color(0xFFAD2831);
+  static const dark       = Color(0xFF38040E);
+  static const accent     = Color(0xFF250902);
+  static const bg         = Color(0xFFF8F4F1);
+  static const surface    = Color(0xFFFFFFFF);
+  static const muted      = Color(0xFFF2EBE7);
+  static const textPrimary   = Color(0xFF1A0A0C);
+  static const textSecondary = Color(0xFF7A5C60);
+  static const border     = Color(0xFFEADDDA);
+
+  static const h1 = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+    color: textPrimary,
+    letterSpacing: -0.4,
+  );
+  static const h2 = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: textPrimary,
+    letterSpacing: -0.2,
+  );
+  static const label = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    color: textSecondary,
+    letterSpacing: 0.6,
+  );
+  static const body = TextStyle(
+    fontFamily: 'Poppins',
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    color: textSecondary,
+  );
+}
+
+// ─────────────────────────────────────────────
+//  ALERTS SCREEN
+// ─────────────────────────────────────────────
 class AlertsScreen extends StatelessWidget {
   const AlertsScreen({super.key});
 
-  // ✅ Alert type → icon + color
+  // ── LOGIC PRESERVED ──
   IconData _getIcon(String type) {
     switch (type) {
-      case 'price_update': return Icons.price_change;
-      case 'low_stock': return Icons.warning_amber;
-      case 'out_of_stock': return Icons.remove_shopping_cart;
-      case 'stock_restored': return Icons.check_circle;
-      case 'peak_hour': return Icons.people;
-      case 'maintenance': return Icons.build;
-      case 'new_station': return Icons.add_location_alt;
-      default: return Icons.notifications;
+      case 'price_update': return Icons.price_change_rounded;
+      case 'low_stock': return Icons.warning_amber_rounded;
+      case 'out_of_stock': return Icons.remove_shopping_cart_rounded;
+      case 'stock_restored': return Icons.check_circle_rounded;
+      case 'peak_hour': return Icons.people_rounded;
+      case 'maintenance': return Icons.build_rounded;
+      case 'new_station': return Icons.add_location_alt_rounded;
+      default: return Icons.notifications_rounded;
     }
   }
 
+  // Refined palette to match premium feel
   Color _getColor(String type) {
     switch (type) {
-      case 'price_update': return Colors.amber;
-      case 'low_stock': return Colors.orange;
-      case 'out_of_stock': return Colors.red;
-      case 'stock_restored': return Colors.green;
-      case 'peak_hour': return Colors.blue;
-      case 'maintenance': return Colors.purple;
-      case 'new_station': return Colors.teal;
-      default: return Colors.amber;
+      case 'price_update': return const Color(0xFFD97706); // Rich Amber
+      case 'low_stock': return const Color(0xFFEA580C);    // Deep Orange
+      case 'out_of_stock': return const Color(0xFFDC2626); // Strong Red
+      case 'stock_restored': return const Color(0xFF16A34A); // Emerald
+      case 'peak_hour': return const Color(0xFF2563EB);    // Royal Blue
+      case 'maintenance': return const Color(0xFF7C3AED);  // Deep Purple
+      case 'new_station': return const Color(0xFF0D9488);  // Rich Teal
+      default: return const Color(0xFFD97706);
     }
   }
 
@@ -39,78 +90,77 @@ class AlertsScreen extends StatelessWidget {
     final diff = now.difference(dt);
 
     if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) {
-      return '${diff.inMinutes} min ago';
-    }
-    if (diff.inHours < 24) {
-      return '${diff.inHours} hrs ago';
-    }
-    if (diff.inDays < 7) {
-      return '${diff.inDays} days ago';
-    }
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+    if (diff.inHours < 24) return '${diff.inHours} hrs ago';
+    if (diff.inDays < 7) return '${diff.inDays} days ago';
     return '${dt.day}/${dt.month}/${dt.year}';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: _T.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: _T.bg,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new,
-              color: Colors.black, size: 18),
-          onPressed: () => Navigator.pop(context),
+        scrolledUnderElevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 8.0),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: _T.dark, size: 20),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
-        title: const Text('Live Alerts',
-            style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold)),
+        title: Text('Live Alerts',
+            style: _T.h2.copyWith(fontSize: 18, color: _T.textPrimary)),
+        centerTitle: true,
         actions: [
-          // ✅ Unread count badge
           StreamBuilder<QuerySnapshot>(
-            stream:
-                AlertRepository.streamNotifications(),
+            stream: AlertRepository.streamNotifications(),
             builder: (context, snap) {
               final unread = snap.hasData
                   ? snap.data!.docs
                       .where((d) =>
-                          (d.data() as Map<String,
-                              dynamic>)['isRead'] !=
-                          true)
+                          (d.data() as Map<String, dynamic>)['isRead'] != true)
                       .length
                   : 0;
               return unread > 0
-                  ? Stack(
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                              Icons.notifications,
-                              color: Color(0xFF8B0000)),
-                          onPressed: () {},
-                        ),
-                        Positioned(
-                          right: 8, top: 8,
-                          child: Container(
-                            padding:
-                                const EdgeInsets.all(3),
-                            decoration:
-                                const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              '$unread',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  fontWeight:
-                                      FontWeight.bold),
-                            ),
+                  ? Padding(
+                      padding: const EdgeInsets.only(right: 16.0),
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _T.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: _T.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                '$unread New',
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  color: _T.primary,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     )
                   : const SizedBox.shrink();
             },
@@ -121,11 +171,9 @@ class AlertsScreen extends StatelessWidget {
         stream: AlertRepository.streamNotifications(),
         builder: (context, snapshot) {
           // ── LOADING ──
-          if (snapshot.connectionState ==
-              ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(
-                  color: Color(0xFF8B0000)),
+              child: CircularProgressIndicator(color: _T.primary, strokeWidth: 3),
             );
           }
 
@@ -135,19 +183,19 @@ class AlertsScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.wifi_off,
-                      size: 48, color: Colors.grey),
-                  const SizedBox(height: 12),
-                  const Text('Unable to load alerts',
-                      style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 16)),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: _T.muted,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.wifi_off_rounded,
+                        size: 32, color: _T.textSecondary),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Unable to load alerts', style: _T.h2),
                   const SizedBox(height: 4),
-                  const Text(
-                      'Check your internet connection',
-                      style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12)),
+                  Text('Check your internet connection', style: _T.body),
                 ],
               ),
             );
@@ -160,22 +208,19 @@ class AlertsScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.notifications_none,
-                      size: 64,
-                      color: Colors.grey[400]),
-                  const SizedBox(height: 12),
-                  const Text('No alerts yet',
-                      style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 16,
-                          fontWeight:
-                              FontWeight.bold)),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: const BoxDecoration(
+                      color: _T.muted,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.notifications_off_rounded,
+                        size: 40, color: _T.textSecondary),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('No alerts yet', style: _T.h2),
                   const SizedBox(height: 4),
-                  const Text(
-                      'Live alerts will appear here',
-                      style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12)),
+                  Text('Live alerts will appear here', style: _T.body),
                 ],
               ),
             );
@@ -183,23 +228,19 @@ class AlertsScreen extends StatelessWidget {
 
           // ── ALERTS LIST ──
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
+            physics: const BouncingScrollPhysics(),
             itemCount: docs.length,
             itemBuilder: (context, index) {
               final doc = docs[index];
-              final data =
-                  doc.data() as Map<String, dynamic>;
-              final type =
-                  data['type'] as String? ?? 'info';
-              final title =
-                  data['title'] as String? ??
-                      'PetroMind Alert';
-              final message =
-                  data['message'] as String? ?? '';
-              final isRead =
-                  data['isRead'] as bool? ?? false;
-              final ts =
-                  data['createdAt'] as Timestamp?;
+              final data = doc.data() as Map<String, dynamic>;
+              final type = data['type'] as String? ?? 'info';
+              final title = data['title'] as String? ?? 'PetroMind Alert';
+              final message = data['message'] as String? ?? '';
+              final isRead = data['isRead'] as bool? ?? false;
+              final ts = data['createdAt'] as Timestamp?;
+
+              final alertColor = _getColor(type);
 
               return GestureDetector(
                 onTap: () {
@@ -208,78 +249,91 @@ class AlertsScreen extends StatelessWidget {
                   }
                 },
                 child: Container(
-                  margin: const EdgeInsets.only(
-                      bottom: 12),
-                  padding: const EdgeInsets.all(14),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF8B0000),
-                    borderRadius:
-                        BorderRadius.circular(12),
-                    border: !isRead
-                        ? Border.all(
-                            color: Colors.white
-                                .withValues(alpha: 0.3),
-                            width: 1.5)
-                        : null,
+                    color: _T.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isRead ? _T.border : _T.primary.withOpacity(0.3), 
+                      width: isRead ? 1 : 1.5,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black
-                            .withValues(alpha: 0.08),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      )
+                        color: _T.dark.withOpacity(isRead ? 0.03 : 0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
                     ],
                   ),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(children: [
-                        Container(
-                          padding:
-                              const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: _getColor(type)
-                                .withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                              _getIcon(type),
-                              color: _getColor(type),
-                              size: 18),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(title,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight:
-                                      FontWeight.bold,
-                                  fontSize: 13)),
-                        ),
-                        if (!isRead)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Container(
-                            width: 8,
-                            height: 8,
-                            decoration:
-                                const BoxDecoration(
-                              color: Colors.greenAccent,
-                              shape: BoxShape.circle,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: alertColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              _getIcon(type),
+                              color: alertColor,
+                              size: 20,
                             ),
                           ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _formatTime(ts),
-                          style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 10),
-                        ),
-                      ]),
-                      const SizedBox(height: 8),
-                      Text(message,
-                          style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13)),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        title,
+                                        style: _T.h2.copyWith(
+                                          fontSize: 14,
+                                          color: isRead ? _T.textPrimary.withOpacity(0.8) : _T.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                    if (!isRead) ...[
+                                      Container(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: const BoxDecoration(
+                                          color: _T.primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                    ],
+                                    Text(
+                                      _formatTime(ts),
+                                      style: _T.label.copyWith(
+                                        fontSize: 10,
+                                        color: isRead ? _T.textSecondary.withOpacity(0.7) : _T.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  message,
+                                  style: _T.body.copyWith(
+                                    fontSize: 12,
+                                    height: 1.4,
+                                    color: isRead ? _T.textSecondary.withOpacity(0.8) : _T.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
