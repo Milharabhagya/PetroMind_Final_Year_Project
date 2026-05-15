@@ -1,16 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// ─────────────────────────────────────────────
+//  DESIGN TOKENS
+// ─────────────────────────────────────────────
+class _T {
+  static const primary       = Color(0xFFAD2831);
+  static const dark          = Color(0xFF38040E);
+  static const bg            = Color(0xFFF8F4F1);
+  static const surface       = Color(0xFFFFFFFF);
+  static const muted         = Color(0xFFF2EBE7);
+  static const textPrimary   = Color(0xFF1A0A0C);
+  static const textSecondary = Color(0xFF7A5C60);
+  static const border        = Color(0xFFEADDDA);
+
+  static const h1 = TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: textPrimary, letterSpacing: -0.4);
+  static const h2 = TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: textPrimary, letterSpacing: -0.2);
+  static const label = TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w500, color: textSecondary, letterSpacing: 0.6);
+  static const body = TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w400, color: textSecondary);
+
+  static BoxDecoration card({Color? color, bool hasBorder = true}) => BoxDecoration(
+    color: color ?? surface,
+    borderRadius: BorderRadius.circular(16),
+    border: hasBorder ? Border.all(color: border, width: 1) : null,
+    boxShadow: [BoxShadow(color: dark.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
+  );
+}
+
 class AdminStockAnalysisScreen extends StatefulWidget {
   const AdminStockAnalysisScreen({super.key});
 
   @override
-  State<AdminStockAnalysisScreen> createState() =>
-      _AdminStockAnalysisScreenState();
+  State<AdminStockAnalysisScreen> createState() => _AdminStockAnalysisScreenState();
 }
 
-class _AdminStockAnalysisScreenState
-    extends State<AdminStockAnalysisScreen> {
+class _AdminStockAnalysisScreenState extends State<AdminStockAnalysisScreen> {
   final _db = FirebaseFirestore.instance;
 
   final List<String> _fuelTypes = [
@@ -25,267 +49,195 @@ class _AdminStockAnalysisScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: _T.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: _T.bg,
         elevation: 0,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.arrow_back_ios_new,
-                color: Colors.white, size: 16),
+        scrolledUnderElevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 8),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _T.dark, size: 20),
+            onPressed: () => Navigator.pop(context),
           ),
-          onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Stock Analysis',
-            style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold)),
+        title: Text('Stock Analysis', style: _T.h2.copyWith(fontSize: 18, color: _T.textPrimary)),
         centerTitle: true,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _db.collection('stations').snapshots(),
         builder: (context, stationsSnap) {
           if (!stationsSnap.hasData) {
-            return const Center(
-                child: CircularProgressIndicator(
-                    color: Colors.amber));
+            return const Center(child: CircularProgressIndicator(color: _T.primary, strokeWidth: 3));
           }
 
           final stations = stationsSnap.data!.docs;
-
           if (stations.isEmpty) {
-            return const Center(
-              child: Text('No stations found',
-                  style: TextStyle(color: Colors.white38)),
-            );
+            return Center(child: Text('No stations found', style: _T.body));
           }
 
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
             children: [
-              // ── FUEL SUMMARY ACROSS ALL STATIONS ──
-              const Text(
-                'Network Stock Summary',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Total stock across all registered stations',
-                style: TextStyle(
-                    color: Colors.white38, fontSize: 12),
-              ),
-              const SizedBox(height: 12),
 
-              // Aggregate stock per fuel type
+              // ── NETWORK SUMMARY ──
+              Text('Network Stock Summary', style: _T.h1.copyWith(fontSize: 18)),
+              const SizedBox(height: 4),
+              Text('Total stock across all registered stations', style: _T.body.copyWith(fontSize: 12)),
+              const SizedBox(height: 16),
+
               FutureBuilder<Map<String, double>>(
                 future: _aggregateStock(stations),
                 builder: (context, snap) {
                   if (!snap.hasData) {
-                    return const Center(
-                        child: CircularProgressIndicator(
-                            color: Colors.amber));
+                    return const Center(child: CircularProgressIndicator(color: _T.primary, strokeWidth: 3));
                   }
                   final totals = snap.data!;
-                  return Column(
-                    children: _fuelTypes.map((fuel) {
-                      final total = totals[fuel] ?? 0;
-                      final color = _fuelColor(total);
-                      return Container(
-                        margin:
-                            const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1A1A2E),
-                          borderRadius:
-                              BorderRadius.circular(10),
-                          border: Border.all(
-                              color:
-                                  color.withOpacity(0.25)),
-                        ),
-                        child: Row(
+                  return Container(
+                    decoration: _T.card(),
+                    child: Column(
+                      children: _fuelTypes.asMap().entries.map((entry) {
+                        final isLast = entry.key == _fuelTypes.length - 1;
+                        final fuel  = entry.value;
+                        final total = totals[fuel] ?? 0;
+                        final color = _stockColor(total);
+                        final label = _stockLabel(total);
+
+                        return Column(
                           children: [
-                            Container(
-                              width: 8,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: color,
-                                borderRadius:
-                                    BorderRadius.circular(4),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              child: Row(
+                                children: [
+                                  // Color bar indicator
+                                  Container(
+                                    width: 4, height: 36,
+                                    decoration: BoxDecoration(
+                                      color: color, borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Text(fuel, style: _T.h2.copyWith(fontSize: 13)),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        '${total.toStringAsFixed(0)} L',
+                                        style: _T.h2.copyWith(color: color, fontSize: 14),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: color.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(label,
+                                            style: _T.label.copyWith(color: color, fontSize: 9, fontWeight: FontWeight.bold)),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(fuel,
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight:
-                                          FontWeight.w500)),
-                            ),
-                            Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '${total.toStringAsFixed(0)} L',
-                                  style: TextStyle(
-                                      color: color,
-                                      fontWeight:
-                                          FontWeight.bold,
-                                      fontSize: 14),
-                                ),
-                                Text(
-                                  _stockLabel(total),
-                                  style: TextStyle(
-                                      color: color
-                                          .withOpacity(0.7),
-                                      fontSize: 10),
-                                ),
-                              ],
-                            ),
+                            if (!isLast) Divider(height: 1, color: _T.border, indent: 34),
                           ],
-                        ),
-                      );
-                    }).toList(),
+                        );
+                      }).toList(),
+                    ),
                   );
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
 
               // ── PER STATION BREAKDOWN ──
-              const Text(
-                'Per Station Breakdown',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
+              Text('Per Station Breakdown', style: _T.h1.copyWith(fontSize: 18)),
+              const SizedBox(height: 4),
+              Text('Individual fuel levels at each station', style: _T.body.copyWith(fontSize: 12)),
+              const SizedBox(height: 16),
 
               ...stations.map((stationDoc) {
-                final stationData = stationDoc.data()
-                    as Map<String, dynamic>;
-                final stationName =
-                    stationData['stationName'] as String? ??
-                        stationData['name'] as String? ??
-                        'Unknown';
-                final brand =
-                    stationData['brand'] as String? ?? '';
+                final stationData = stationDoc.data() as Map<String, dynamic>;
+                final stationName = stationData['stationName'] as String? ?? stationData['name'] as String? ?? 'Unknown';
+                final brand = stationData['brand'] as String? ?? '';
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A2E),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: Colors.orangeAccent
-                            .withOpacity(0.2)),
-                  ),
+                  decoration: _T.card(),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          const Icon(
-                              Icons.local_gas_station,
-                              color: Colors.orangeAccent,
-                              size: 16),
-                          const SizedBox(width: 8),
-                          Text(
-                            '$stationName${brand.isNotEmpty ? ' ($brand)' : ''}',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13),
-                          ),
-                        ],
+                      // Station header
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF59E0B).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.local_gas_station_rounded,
+                                  color: Color(0xFFF59E0B), size: 16),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              '$stationName${brand.isNotEmpty ? ' ($brand)' : ''}',
+                              style: _T.h2.copyWith(fontSize: 13),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 10),
-                      StreamBuilder<QuerySnapshot>(
-                        stream: _db
-                            .collection('stations')
-                            .doc(stationDoc.id)
-                            .collection('stock')
-                            .snapshots(),
-                        builder: (context, stockSnap) {
-                          if (!stockSnap.hasData) {
-                            return const Text(
-                                'Loading...',
-                                style: TextStyle(
-                                    color: Colors.white38,
-                                    fontSize: 12));
-                          }
-                          final stockDocs =
-                              stockSnap.data!.docs;
-                          if (stockDocs.isEmpty) {
-                            return const Text(
-                                'No stock data',
-                                style: TextStyle(
-                                    color: Colors.white38,
-                                    fontSize: 12));
-                          }
-                          return Wrap(
-                            spacing: 8,
-                            runSpacing: 6,
-                            children: stockDocs
-                                .where((d) {
-                              final data = d.data()
-                                  as Map<String, dynamic>;
-                              return data['fuelType'] !=
-                                  'Air Pump';
-                            })
-                                .map((d) {
-                              final data = d.data()
-                                  as Map<String, dynamic>;
-                              final fuel =
-                                  data['fuelType']
-                                      as String? ??
-                                      '';
-                              final litres =
-                                  (data['stockLitres']
-                                              as num?)
-                                          ?.toDouble() ??
-                                      0;
-                              final color =
-                                  _fuelColor(litres);
-                              return Container(
-                                padding:
-                                    const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: color
-                                      .withOpacity(0.1),
-                                  borderRadius:
-                                      BorderRadius.circular(
-                                          6),
-                                  border: Border.all(
-                                      color: color
-                                          .withOpacity(
-                                              0.3)),
-                                ),
-                                child: Text(
-                                  '${_shortFuelName(fuel)}: ${litres.toStringAsFixed(0)}L',
-                                  style: TextStyle(
-                                      color: color,
-                                      fontSize: 10,
-                                      fontWeight:
-                                          FontWeight.bold),
-                                ),
-                              );
-                            }).toList(),
-                          );
-                        },
+                      Divider(height: 20, color: _T.border, indent: 16, endIndent: 16),
+
+                      // Stock chips
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                        child: StreamBuilder<QuerySnapshot>(
+                          stream: _db
+                              .collection('stations')
+                              .doc(stationDoc.id)
+                              .collection('stock')
+                              .snapshots(),
+                          builder: (context, stockSnap) {
+                            if (!stockSnap.hasData) {
+                              return Text('Loading...', style: _T.body.copyWith(fontSize: 12));
+                            }
+                            final stockDocs = stockSnap.data!.docs
+                                .where((d) => (d.data() as Map)['fuelType'] != 'Air Pump')
+                                .toList();
+
+                            if (stockDocs.isEmpty) {
+                              return Text('No stock data', style: _T.body.copyWith(fontSize: 12));
+                            }
+
+                            return Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: stockDocs.map((d) {
+                                final data   = d.data() as Map<String, dynamic>;
+                                final fuel   = data['fuelType'] as String? ?? '';
+                                final litres = (data['stockLitres'] as num?)?.toDouble() ?? 0;
+                                final color  = _stockColor(litres);
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: color.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: color.withOpacity(0.3)),
+                                  ),
+                                  child: Text(
+                                    '${_shortFuelName(fuel)}: ${litres.toStringAsFixed(0)}L',
+                                    style: _T.label.copyWith(
+                                        color: color, fontSize: 10, fontWeight: FontWeight.w600),
+                                  ),
+                                );
+                              }).toList(),
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -298,53 +250,39 @@ class _AdminStockAnalysisScreenState
     );
   }
 
-  Future<Map<String, double>> _aggregateStock(
-      List<QueryDocumentSnapshot> stations) async {
-    final totals = <String, double>{};
-    for (final fuel in _fuelTypes) {
-      totals[fuel] = 0;
-    }
+  Future<Map<String, double>> _aggregateStock(List<QueryDocumentSnapshot> stations) async {
+    final totals = <String, double>{for (final f in _fuelTypes) f: 0};
     for (final station in stations) {
-      final stockSnap = await _db
-          .collection('stations')
-          .doc(station.id)
-          .collection('stock')
-          .get();
+      final stockSnap = await _db.collection('stations').doc(station.id).collection('stock').get();
       for (final doc in stockSnap.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final fuel = data['fuelType'] as String? ?? '';
-        final litres =
-            (data['stockLitres'] as num?)?.toDouble() ?? 0;
-        if (totals.containsKey(fuel)) {
-          totals[fuel] = (totals[fuel] ?? 0) + litres;
-        }
+        final data  = doc.data() as Map<String, dynamic>;
+        final fuel  = data['fuelType'] as String? ?? '';
+        final litres = (data['stockLitres'] as num?)?.toDouble() ?? 0;
+        if (totals.containsKey(fuel)) totals[fuel] = (totals[fuel] ?? 0) + litres;
       }
     }
     return totals;
   }
 
-  Color _fuelColor(double litres) {
-    if (litres <= 0) return Colors.red;
-    if (litres < 500) return Colors.orangeAccent;
-    if (litres < 2000) return Colors.yellowAccent;
-    return Colors.greenAccent;
+  Color _stockColor(double litres) {
+    if (litres <= 0)     return const Color(0xFFDC2626);
+    if (litres < 500)    return const Color(0xFFF59E0B);
+    if (litres < 2000)   return const Color(0xFF2563EB);
+    return const Color(0xFF16A34A);
   }
 
   String _stockLabel(double litres) {
-    if (litres <= 0) return 'Empty';
-    if (litres < 500) return 'Critical';
+    if (litres <= 0)   return 'Empty';
+    if (litres < 500)  return 'Critical';
     if (litres < 2000) return 'Low';
     return 'Good';
   }
 
   String _shortFuelName(String fuel) {
     return fuel
-        .replaceAll('Octane', '')
-        .replaceAll('Petrol', 'P')
-        .replaceAll('Auto Diesel', 'ADsl')
-        .replaceAll('Super Diesel', 'SDsl')
-        .replaceAll('Lanka Kerosene', 'LKer')
-        .replaceAll('Industrial Kerosene', 'IKer')
+        .replaceAll('Octane', '').replaceAll('Petrol', 'P')
+        .replaceAll('Auto Diesel', 'ADsl').replaceAll('Super Diesel', 'SDsl')
+        .replaceAll('Lanka Kerosene', 'LKer').replaceAll('Industrial Kerosene', 'IKer')
         .trim();
   }
 }

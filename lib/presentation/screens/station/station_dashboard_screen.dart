@@ -1,6 +1,8 @@
 // ✅ PREMIUM REDESIGN — ALL LOGIC PRESERVED
 // Design: Minimalist Industrial SaaS · Poppins
 // Matches Customer App Design System
+// ✅ FIX: Station owner now sees READ-ONLY fuel prices (FuelPriceManagementScreen)
+//         Admin retains exclusive edit access via AdminPriceScreen
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -17,47 +19,37 @@ import 'station_profile_screen.dart';
 import 'customer_feedback_screen.dart';
 import 'admin_settings_screen.dart';
 import '../auth/auth_screen.dart';
-import '../prices/admin_price_screen.dart';
+// ✅ CHANGED: Import read-only screen instead of admin edit screen
+import 'fuel_price_management_screen.dart';
 
 // ─────────────────────────────────────────────
 //  DESIGN TOKENS (Shared across the app)
 // ─────────────────────────────────────────────
 class _T {
-  static const primary    = Color(0xFFAD2831);
-  static const dark       = Color(0xFF38040E);
-  static const accent     = Color(0xFF250902);
-  static const bg         = Color(0xFFF8F4F1);
-  static const surface    = Color(0xFFFFFFFF);
-  static const muted      = Color(0xFFF2EBE7);
+  static const primary       = Color(0xFFAD2831);
+  static const dark          = Color(0xFF38040E);
+  static const accent        = Color(0xFF250902);
+  static const bg            = Color(0xFFF8F4F1);
+  static const surface       = Color(0xFFFFFFFF);
+  static const muted         = Color(0xFFF2EBE7);
   static const textPrimary   = Color(0xFF1A0A0C);
   static const textSecondary = Color(0xFF7A5C60);
-  static const border     = Color(0xFFEADDDA);
+  static const border        = Color(0xFFEADDDA);
 
   static const h1 = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 22,
-    fontWeight: FontWeight.w700,
-    color: textPrimary,
-    letterSpacing: -0.4,
+    fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700,
+    color: textPrimary, letterSpacing: -0.4,
   );
   static const h2 = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    color: textPrimary,
-    letterSpacing: -0.2,
+    fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600,
+    color: textPrimary, letterSpacing: -0.2,
   );
   static const label = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 11,
-    fontWeight: FontWeight.w500,
-    color: textSecondary,
-    letterSpacing: 0.6,
+    fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w500,
+    color: textSecondary, letterSpacing: 0.6,
   );
   static const body = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 13,
-    fontWeight: FontWeight.w400,
+    fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w400,
     color: textSecondary,
   );
 
@@ -67,11 +59,7 @@ class _T {
         borderRadius: BorderRadius.circular(16),
         border: hasBorder ? Border.all(color: border, width: 1) : null,
         boxShadow: [
-          BoxShadow(
-            color: dark.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
+          BoxShadow(color: dark.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4)),
         ],
       );
 }
@@ -105,7 +93,6 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
     super.dispose();
   }
 
-  // ── LOGIC PRESERVED ──
   Future<void> _checkStockAlerts() async {
     try {
       final provider = Provider.of<UserProvider>(context, listen: false);
@@ -149,6 +136,7 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
             // ── HEADER ──
             Text('Welcome Back,', style: _T.body.copyWith(fontSize: 14)),
             const SizedBox(height: 2),
@@ -157,11 +145,13 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
             Text(_getTodayDate(), style: _T.label),
             const SizedBox(height: 24),
 
-            // ── UPDATE FUEL PRICES BUTTON ──
+            // ── FUEL PRICES BUTTON (READ-ONLY for station owner) ──
+            // ✅ CHANGED: navigates to FuelPriceManagementScreen (read-only)
+            //             label updated to reflect view-only access
             GestureDetector(
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const AdminPriceScreen()),
+                MaterialPageRoute(builder: (_) => const FuelPriceManagementScreen()),
               ),
               child: Container(
                 width: double.infinity,
@@ -189,16 +179,21 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
                         color: Colors.white.withOpacity(0.15),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.price_change_rounded, color: Colors.white, size: 24),
+                      // ✅ CHANGED: icon reflects view-only (visibility icon)
+                      child: const Icon(Icons.local_gas_station_rounded, color: Colors.white, size: 24),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Update Fuel Prices', style: _T.h2.copyWith(color: Colors.white, fontSize: 15)),
+                          // ✅ CHANGED: label from 'Update Fuel Prices' → 'Current Fuel Prices'
+                          Text('Current Fuel Prices',
+                              style: _T.h2.copyWith(color: Colors.white, fontSize: 15)),
                           const SizedBox(height: 2),
-                          Text('Publish CPC updates to all customers', style: _T.body.copyWith(color: Colors.white70, fontSize: 11)),
+                          // ✅ CHANGED: subtitle reflects read-only nature
+                          Text('View official CPC rates — set by PetroMind Admin',
+                              style: _T.body.copyWith(color: Colors.white70, fontSize: 11)),
                         ],
                       ),
                     ),
@@ -279,7 +274,8 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
                           context,
                           MaterialPageRoute(builder: (_) => const StockManagementScreen()),
                         ),
-                        child: Text('View Report', style: _T.label.copyWith(color: _T.primary, fontWeight: FontWeight.bold)),
+                        child: Text('View Report',
+                            style: _T.label.copyWith(color: _T.primary, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
@@ -338,7 +334,8 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
                       );
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('⚠️ Low stock alert sent!', style: _T.body.copyWith(color: Colors.white)),
+                          content: Text('⚠️ Low stock alert sent!',
+                              style: _T.body.copyWith(color: Colors.white)),
                           backgroundColor: const Color(0xFFDC2626),
                           behavior: SnackBarBehavior.floating,
                         ));
@@ -362,7 +359,8 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
                       );
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('🕐 Peak hour alert sent!', style: _T.body.copyWith(color: Colors.white)),
+                          content: Text('🕐 Peak hour alert sent!',
+                              style: _T.body.copyWith(color: Colors.white)),
                           backgroundColor: const Color(0xFFF59E0B),
                           behavior: SnackBarBehavior.floating,
                         ));
@@ -388,7 +386,8 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
                       );
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('🔧 Maintenance alert sent!', style: _T.body.copyWith(color: Colors.white)),
+                          content: Text('🔧 Maintenance alert sent!',
+                              style: _T.body.copyWith(color: Colors.white)),
                           backgroundColor: const Color(0xFF7C3AED),
                           behavior: SnackBarBehavior.floating,
                         ));
@@ -405,7 +404,9 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
                         children: [
                           const Icon(Icons.build_rounded, color: Color(0xFF7C3AED)),
                           const SizedBox(height: 8),
-                          Text('Close Station', style: _T.label.copyWith(color: const Color(0xFF7C3AED), fontWeight: FontWeight.bold)),
+                          Text('Close Station',
+                              style: _T.label.copyWith(
+                                  color: const Color(0xFF7C3AED), fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
@@ -422,7 +423,8 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
                       );
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('✅ Reopen alert sent!', style: _T.body.copyWith(color: Colors.white)),
+                          content: Text('✅ Reopen alert sent!',
+                              style: _T.body.copyWith(color: Colors.white)),
                           backgroundColor: const Color(0xFF16A34A),
                           behavior: SnackBarBehavior.floating,
                         ));
@@ -439,7 +441,9 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
                         children: [
                           const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A)),
                           const SizedBox(height: 8),
-                          Text('Reopen Station', style: _T.label.copyWith(color: const Color(0xFF16A34A), fontWeight: FontWeight.bold)),
+                          Text('Reopen Station',
+                              style: _T.label.copyWith(
+                                  color: const Color(0xFF16A34A), fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
@@ -459,7 +463,8 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
                     context,
                     MaterialPageRoute(builder: (_) => const StationNotificationsScreen()),
                   ),
-                  child: Text('See All', style: _T.label.copyWith(color: _T.primary, fontWeight: FontWeight.bold)),
+                  child: Text('See All',
+                      style: _T.label.copyWith(color: _T.primary, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -474,15 +479,13 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
                   .snapshots(),
               builder: (context, snapshot) {
                 final docs = snapshot.data?.docs ?? [];
-                
+
                 if (docs.isEmpty) {
                   return Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(24),
                     decoration: _T.card(),
-                    child: Center(
-                      child: Text('No recent activity yet', style: _T.body),
-                    ),
+                    child: Center(child: Text('No recent activity yet', style: _T.body)),
                   );
                 }
 
@@ -495,17 +498,22 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
                       final ts = data['timestamp'] as Timestamp?;
                       final timeStr = ts != null ? _formatTime(ts.toDate()) : '';
                       final isLast = docs.last.id == doc.id;
-                      
+
                       return Column(
                         children: [
                           ListTile(
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                             leading: Container(
                               padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(color: _T.primary.withOpacity(0.1), shape: BoxShape.circle),
-                              child: const Icon(Icons.notifications_rounded, color: _T.primary, size: 16),
+                              decoration: BoxDecoration(
+                                  color: _T.primary.withOpacity(0.1), shape: BoxShape.circle),
+                              child: const Icon(Icons.notifications_rounded,
+                                  color: _T.primary, size: 16),
                             ),
-                            title: Text(msg, style: _T.body.copyWith(color: _T.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            title: Text(msg,
+                                style: _T.body.copyWith(color: _T.textPrimary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
                             trailing: Text(timeStr, style: _T.label.copyWith(fontSize: 10)),
                           ),
                           if (!isLast) Divider(color: _T.border, height: 1, indent: 56),
@@ -535,8 +543,8 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
 
   String _getTodayDate() {
     final now = DateTime.now();
-    final days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-    final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${days[now.weekday - 1]}, ${now.day} ${months[now.month - 1]} ${now.year}';
   }
 
@@ -565,11 +573,8 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
         errorBuilder: (_, __, ___) => Text(
           'PETROMIND',
           style: TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            color: _T.primary,
-            letterSpacing: 1.5,
+            fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w800,
+            color: _T.primary, letterSpacing: 1.5,
           ),
         ),
       ),
@@ -601,16 +606,11 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
-                        color: Color(0xFFDC2626),
-                        shape: BoxShape.circle,
-                      ),
+                          color: Color(0xFFDC2626), shape: BoxShape.circle),
                       child: Text(
                         unread > 9 ? '9+' : '$unread',
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                        ),
+                            color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -628,8 +628,7 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _T.primary,
-                borderRadius: BorderRadius.circular(10),
+                color: _T.primary, borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 20),
             ),
@@ -651,13 +650,11 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
               child: Row(
                 children: [
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 40, height: 40,
                     decoration: BoxDecoration(
-                      color: _T.primary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.local_gas_station_rounded, color: Colors.white, size: 20),
+                        color: _T.primary, borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.local_gas_station_rounded,
+                        color: Colors.white, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Column(
@@ -666,20 +663,16 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
                       const Text(
                         'PETROMIND',
                         style: TextStyle(
-                          fontFamily: 'Poppins',
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                          letterSpacing: 1.5,
+                          fontFamily: 'Poppins', color: Colors.white,
+                          fontWeight: FontWeight.w800, fontSize: 14, letterSpacing: 1.5,
                         ),
                       ),
                       Text(
-                        'Station Admin',
+                        'Station Owner',
                         style: TextStyle(
                           fontFamily: 'Poppins',
                           color: Colors.white.withOpacity(0.45),
-                          fontSize: 10,
-                          letterSpacing: 0.5,
+                          fontSize: 10, letterSpacing: 0.5,
                         ),
                       ),
                     ],
@@ -693,34 +686,46 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 children: [
-                  _drawerItem(context, Icons.dashboard_rounded, 'Dashboard', () => Navigator.pop(context)),
-                  _drawerItem(context, Icons.price_change_rounded, 'Update Fuel Prices', () {
+                  _drawerItem(context, Icons.dashboard_rounded, 'Dashboard',
+                      () => Navigator.pop(context)),
+
+                  // ✅ CHANGED: label 'Update Fuel Prices' → 'Fuel Prices'
+                  //             navigates to read-only FuelPriceManagementScreen
+                  _drawerItem(context, Icons.local_gas_station_rounded, 'Fuel Prices', () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPriceScreen()));
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const FuelPriceManagementScreen()));
                   }),
+
                   _drawerItem(context, Icons.inventory_2_rounded, 'Stock Management', () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const StockManagementScreen()));
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const StockManagementScreen()));
                   }),
                   _drawerItem(context, Icons.receipt_long_rounded, 'Sales & Transactions', () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SalesTransactionsScreen()));
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const SalesTransactionsScreen()));
                   }),
                   _drawerItem(context, Icons.notifications_rounded, 'Notifications', () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const StationNotificationsScreen()));
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const StationNotificationsScreen()));
                   }),
                   _drawerItem(context, Icons.storefront_rounded, 'Station Profile', () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const StationProfileScreen()));
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const StationProfileScreen()));
                   }),
                   _drawerItem(context, Icons.forum_rounded, 'Customer Feedback', () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerFeedbackScreen()));
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const CustomerFeedbackScreen()));
                   }),
                   _drawerItem(context, Icons.admin_panel_settings_rounded, 'Admin Settings', () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminSettingsScreen()));
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const AdminSettingsScreen()));
                   }),
                 ],
               ),
@@ -745,10 +750,8 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
                 title: const Text(
                   'Log Out',
                   style: TextStyle(
-                    fontFamily: 'Poppins',
-                    color: _T.primary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    fontFamily: 'Poppins', color: _T.primary,
+                    fontWeight: FontWeight.w600, fontSize: 14,
                   ),
                 ),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -774,13 +777,12 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
       title: Text(
         title,
         style: const TextStyle(
-          fontFamily: 'Poppins',
-          color: Colors.white,
-          fontWeight: FontWeight.w500,
-          fontSize: 13,
+          fontFamily: 'Poppins', color: Colors.white,
+          fontWeight: FontWeight.w500, fontSize: 13,
         ),
       ),
-      trailing: Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.25), size: 18),
+      trailing: Icon(Icons.chevron_right_rounded,
+          color: Colors.white.withOpacity(0.25), size: 18),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       hoverColor: Colors.white.withOpacity(0.04),
     );
@@ -796,9 +798,7 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
+                  color: color.withOpacity(0.1), shape: BoxShape.circle),
               child: Icon(icon, color: color, size: 18),
             ),
             const SizedBox(height: 12),
@@ -822,8 +822,7 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 8,
-          height: 8,
+          width: 8, height: 8,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
@@ -874,7 +873,8 @@ class _StationDashboardScreenState extends State<StationDashboardScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: _T.textSecondary),
+            const Icon(Icons.arrow_forward_ios_rounded,
+                size: 14, color: _T.textSecondary),
           ],
         ),
       ),

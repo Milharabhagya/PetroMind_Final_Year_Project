@@ -126,60 +126,70 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // ── LOGIC PRESERVED & ENHANCED ──
+  // ─────────────────────────────────────────────────────────────────────────────
+// REPLACE the _fetchLocation() method in home_screen.dart with this version.
+// Everything else in home_screen.dart stays exactly the same.
+// ─────────────────────────────────────────────────────────────────────────────
+
   Future<void> _fetchLocation() async {
-  final position = await LocationService.getCurrentLocation();
-  String resolvedLocation = 'Location unavailable';
+    // ✅ init() locks the first good GPS fix for the whole app session.
+    // If the fix is already cached (e.g. from a previous screen),
+    // this returns instantly with the SAME coordinates — no drift.
+    await LocationService.instance.init();
+    final position = LocationService.instance.position;
 
-  if (position != null) {
-    try {
-      // 1. Prepare the OpenStreetMap Nominatim URL
-      final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.latitude}&lon=${position.longitude}&zoom=10&addressdetails=1'
-      );
+    String resolvedLocation = 'Location unavailable';
 
-      // 2. Make the request
-      // IMPORTANT: Nominatim requires a User-Agent header to identify your app
-      final response = await http.get(url, headers: {
-        'User-Agent': 'PetroMind_App_v1.0', 
-      });
+    if (position != null) {
+      try {
+        final url = Uri.parse(
+          'https://nominatim.openstreetmap.org/reverse'
+          '?format=json'
+          '&lat=${position.latitude}'
+          '&lon=${position.longitude}'
+          '&zoom=10&addressdetails=1',
+        );
+        final response = await http.get(url, headers: {
+          'User-Agent': 'PetroMind_App_v1.0',
+        });
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final address = data['address'];
+        if (response.statusCode == 200) {
+          final data    = json.decode(response.body);
+          final address = data['address'] as Map<String, dynamic>? ?? {};
+          final city    = address['city']    ??
+                          address['town']    ??
+                          address['village'] ??
+                          address['suburb']  ??
+                          address['county'];
+          final country = address['country'];
 
-        // 3. Extract the best possible area name
-        String? city = address['city'] ?? 
-                       address['town'] ?? 
-                       address['village'] ?? 
-                       address['suburb'] ?? 
-                       address['county'];
-        
-        String? country = address['country'];
-
-        if (city != null && country != null) {
-          resolvedLocation = '$city, $country';
-        } else if (city != null) {
-          resolvedLocation = city;
-        } else {
-          resolvedLocation = '${position.latitude.toStringAsFixed(3)}, ${position.longitude.toStringAsFixed(3)}';
+          if (city != null && country != null) {
+            resolvedLocation = '$city, $country';
+          } else if (city != null) {
+            resolvedLocation = city;
+          } else {
+            resolvedLocation =
+                '${position.latitude.toStringAsFixed(3)}, '
+                '${position.longitude.toStringAsFixed(3)}';
+          }
         }
+      } catch (e) {
+        debugPrint('Geocoding error: $e');
+        resolvedLocation =
+            '${position.latitude.toStringAsFixed(3)}, '
+            '${position.longitude.toStringAsFixed(3)}';
       }
-    } catch (e) {
-      debugPrint('🔴 Free Geocoding Error: $e');
-      // Fallback to coordinates if the network call fails
-      resolvedLocation = '${position.latitude.toStringAsFixed(3)}, ${position.longitude.toStringAsFixed(3)}';
+    }
+
+    if (mounted) {
+      setState(() {
+        _userPosition   = position;
+        _locationLoaded = true;
+        _locationLabel  = resolvedLocation;
+      });
+      _fadeCtrl.forward();
     }
   }
-
-  if (mounted) {
-    setState(() {
-      _userPosition = position;
-      _locationLoaded = true;
-      _locationLabel = resolvedLocation;
-    });
-    _fadeCtrl.forward();
-  }
-}
 
   String _daySuffix(int day) {
     if (day >= 11 && day <= 13) return 'th';

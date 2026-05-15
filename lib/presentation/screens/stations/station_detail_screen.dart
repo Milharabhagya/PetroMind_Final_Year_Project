@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:js' as js;
+import 'package:petromind/core/utils/web_stubs.dart' if (dart.library.js) 'dart:js' as js;
 import '../profile/profile_screen.dart';
 import '../../../data/repositories/crowd_repository.dart';
 
